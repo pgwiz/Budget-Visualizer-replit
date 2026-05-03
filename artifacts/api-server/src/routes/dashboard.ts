@@ -1,8 +1,12 @@
 import { Router } from "express";
-import { db, budgetCyclesTable, sectorsTable, allocationsTable, usersTable, auditLogsTable, revocationsTable } from "@workspace/db";
+import { db, budgetCyclesTable, sectorsTable, allocationsTable, usersTable, auditLogsTable } from "@workspace/db";
 import { eq, and, inArray, sql, desc, gte } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
-import { getTotalAllocated, getTotalRevoked, getNetAllocated, getTotalAllocatedFrom, getAvailableBalance, getUtilizationPct } from "../lib/budget-calc";
+import {
+  getTotalAllocated, getTotalRevoked, getNetAllocated,
+  getTotalAllocatedFrom, getAvailableBalance, getUtilizationPct,
+  getSubtreeIds, getUserScopeId,
+} from "../lib/budget-calc";
 
 const router = Router();
 
@@ -16,6 +20,8 @@ async function getActiveCycle() {
   return cycles[0] ?? null;
 }
 
+// ── Summary ──────────────────────────────────────────────────────────────────
+
 router.get("/dashboard/summary", requireAuth, async (req, res): Promise<void> => {
   const user = (req as any).user;
   const cycleIdParam = req.query.cycleId ? parseInt(req.query.cycleId as string) : null;
@@ -24,93 +30,136 @@ router.get("/dashboard/summary", requireAuth, async (req, res): Promise<void> =>
     : await getActiveCycle();
 
   const cycleId = cycle?.id ?? null;
-  const totalBudget = cycle ? parseFloat(cycle.totalBudget) : 0;
+  const scopeSectorId = getUserScopeId(user); // null = global
 
-  let totalAllocated = 0, totalRevoked = 0, availableBalance = 0, utilizationPct = 0;
+  let totalBudget = 0, totalAllocated = 0, totalRevoked = 0, availableBalance = 0, utilizationPct = 0;
+
   if (cycleId) {
-    // Only count TOP-LEVEL allocations (from the National Budget Pool, fromSectorId IS NULL)
-    // to avoid double-counting ministry→sub-sector→sub-sub flows.
-    const allocResult = await db.select({ total: sql<string>`COALESCE(SUM(amount), 0)` }).from(allocationsTable).where(and(eq(allocationsTable.budgetCycleId, cycleId), sql`${allocationsTable.fromSectorId} IS NULL`, inArray(allocationsTable.status, ["active", "pending", "exhausted"])));
-    const revResult = await db.select({ total: sql<string>`COALESCE(SUM(amount), 0)` }).from(allocationsTable).where(and(eq(allocationsTable.budgetCycleId, cycleId), sql`${allocationsTable.fromSectorId} IS NULL`, eq(allocationsTable.status, "revoked")));
-    totalAllocated = parseFloat(allocResult[0]?.total ?? "0");
-    totalRevoked = parseFloat(revResult[0]?.total ?? "0");
-    availableBalance = totalBudget - totalAllocated;
-    utilizationPct = totalBudget > 0 ? Math.min(100, (totalAllocated / totalBudget) * 100) : 0;
+    if (scopeSectorId === null) {
+      // Global view: cycle budget pool, top-level allocations only (no double-count)
+      totalBudget = cycle ? parseFloat(cycle.totalBudget) : 0;
+      const allocResult = await db
+        .select({ total: sql<string>`COALESCE(SUM(amount), 0)` })
+        .from(allocationsTable)
+        .where(and(eq(allocationsTable.budgetCycleId, cycleId), sql`${allocationsTable.fromSectorId} IS NULL`, inArray(allocationsTable.status, ["active", "pending", "exhausted"])));
+      const revResult = await db
+        .select({ total: sql<string>`COALESCE(SUM(amount), 0)` })
+        .from(allocationsTable)
+        .where(and(eq(allocationsTable.budgetCycleId, cycleId), sql`${allocationsTable.fromSectorId} IS NULL`, eq(allocationsTable.status, "revoked")));
+      totalAllocated = parseFloat(allocResult[0]?.total ?? "0");
+      totalRevoked   = parseFloat(revResult[0]?.total ?? "0");
+      availableBalance = totalBudget - totalAllocated;
+      utilizationPct   = totalBudget > 0 ? Math.min(100, (totalAllocated / totalBudget) * 100) : 0;
+    } else {
+      // Scoped: user's sector is their "budget universe"
+      // totalBudget = what was net-allocated TO them
+      totalBudget      = await getNetAllocated(scopeSectorId, cycleId);
+      // totalAllocated = what they distributed OUT to children
+      totalAllocated   = await getTotalAllocatedFrom(scopeSectorId, cycleId);
+      availableBalance = await getAvailableBalance(scopeSectorId, cycleId);
+      utilizationPct   = await getUtilizationPct(scopeSectorId, cycleId);
+    }
   }
 
-  const sectorCount = (await db.select({ c: sql<number>`COUNT(*)` }).from(sectorsTable))[0]?.c ?? 0;
-  const activeAllocations = cycleId ? (await db.select({ c: sql<number>`COUNT(*)` }).from(allocationsTable).where(and(eq(allocationsTable.budgetCycleId, cycleId), eq(allocationsTable.status, "active"))))[0]?.c ?? 0 : 0;
+  // Sector count and active allocations — scoped to subtree
+  let sectorCount = 0, activeAllocations = 0;
+  if (scopeSectorId === null) {
+    sectorCount = Number((await db.select({ c: sql<number>`COUNT(*)` }).from(sectorsTable))[0]?.c ?? 0);
+    activeAllocations = cycleId
+      ? Number((await db.select({ c: sql<number>`COUNT(*)` }).from(allocationsTable)
+          .where(and(eq(allocationsTable.budgetCycleId, cycleId), eq(allocationsTable.status, "active"))))[0]?.c ?? 0)
+      : 0;
+  } else {
+    const subtreeIds = await getSubtreeIds(scopeSectorId);
+    sectorCount = subtreeIds.length;
+    activeAllocations = cycleId
+      ? Number((await db.select({ c: sql<number>`COUNT(*)` }).from(allocationsTable)
+          .where(and(eq(allocationsTable.budgetCycleId, cycleId), eq(allocationsTable.status, "active"), inArray(allocationsTable.toSectorId, subtreeIds))))[0]?.c ?? 0)
+      : 0;
+  }
 
-  // Ministry-level sectors (depth=1, children of ROOT) — NOT root itself
-  const topSectors = await db.select().from(sectorsTable).where(eq(sectorsTable.depth, 1)).limit(10);
-  const enrichedTop = await Promise.all(topSectors.map(async s => {
-    const ta = cycleId ? await getTotalAllocated(s.id, cycleId) : 0;
-    const tr = cycleId ? await getTotalRevoked(s.id, cycleId) : 0;
+  // Top sectors: global → depth=1 children of root; scoped → direct children of user's sector
+  const childSectors = scopeSectorId === null
+    ? await db.select().from(sectorsTable).where(eq(sectorsTable.depth, 1)).limit(10)
+    : await db.select().from(sectorsTable).where(eq(sectorsTable.parentId, scopeSectorId));
+
+  const topSectors = await Promise.all(childSectors.map(async s => {
+    const ta    = cycleId ? await getTotalAllocated(s.id, cycleId) : 0;
+    const tr    = cycleId ? await getTotalRevoked(s.id, cycleId) : 0;
     const avail = cycleId ? await getAvailableBalance(s.id, cycleId) : 0;
-    const pct = cycleId ? await getUtilizationPct(s.id, cycleId) : 0;
+    const pct   = cycleId ? await getUtilizationPct(s.id, cycleId) : 0;
     const children = await db.select({ id: sectorsTable.id }).from(sectorsTable).where(eq(sectorsTable.parentId, s.id));
     return { ...s, totalAllocated: ta, totalRevoked: tr, netAllocated: ta - tr, availableBalance: avail, utilizationPct: pct, childCount: children.length, responsibleUser: null, parent: null };
   }));
 
-  let myAllocated = null, myDistributed = null, myAvailable = null;
-  if (user.sectorId && cycleId && !["super_admin", "ceo"].includes(user.role)) {
-    myAllocated = await getNetAllocated(user.sectorId, cycleId);
-    myDistributed = await getTotalAllocatedFrom(user.sectorId, cycleId);
-    myAvailable = await getAvailableBalance(user.sectorId, cycleId);
-  }
+  // My personal sector stats (always shown when sector is set)
+  const myAllocated    = scopeSectorId && cycleId ? await getNetAllocated(scopeSectorId, cycleId)      : null;
+  const myDistributed  = scopeSectorId && cycleId ? await getTotalAllocatedFrom(scopeSectorId, cycleId) : null;
+  const myAvailable    = scopeSectorId && cycleId ? await getAvailableBalance(scopeSectorId, cycleId)   : null;
 
-  const enrichedCycle = cycle ? {
-    ...cycle, totalBudget, totalAllocated, totalRevoked,
-    availableBalance, utilizationPct,
-  } : null;
+  const enrichedCycle = cycle ? { ...cycle, totalBudget, totalAllocated, totalRevoked, availableBalance, utilizationPct } : null;
 
   res.json({
     role: user.role, cycle: enrichedCycle, totalBudget, totalAllocated, totalRevoked,
-    availableBalance, utilizationPct, sectorCount: Number(sectorCount),
-    activeAllocations: Number(activeAllocations), topSectors: enrichedTop,
+    availableBalance, utilizationPct, sectorCount, activeAllocations, topSectors,
     myAllocated, myDistributed, myAvailable,
   });
 });
 
+// ── Utilization Chart ─────────────────────────────────────────────────────────
+
 router.get("/dashboard/utilization-chart", requireAuth, async (req, res): Promise<void> => {
-  const cycleIdParam = req.query.cycleId ? parseInt(req.query.cycleId as string) : null;
-  const cycleId = cycleIdParam ?? await getActiveCycleId();
+  const user = (req as any).user;
+  const cycleId = req.query.cycleId ? parseInt(req.query.cycleId as string) : await getActiveCycleId();
   const sectorIdParam = req.query.sectorId ? parseInt(req.query.sectorId as string) : null;
+  const scopeSectorId = getUserScopeId(user);
 
   let sectors: any[];
   if (sectorIdParam) {
-    // Children of this sector
+    // Explicit drill-down: children of requested sector
     sectors = await db.select().from(sectorsTable).where(eq(sectorsTable.parentId, sectorIdParam));
+  } else if (scopeSectorId !== null) {
+    // Scoped user: show their direct children
+    sectors = await db.select().from(sectorsTable).where(eq(sectorsTable.parentId, scopeSectorId));
   } else {
-    // Ministry-level sectors (depth=1) — excludes ROOT which has no receivable allocations
+    // Global: ministry-level sectors (depth=1)
     sectors = await db.select().from(sectorsTable).where(eq(sectorsTable.depth, 1));
   }
 
   const result = await Promise.all(sectors.map(async s => {
     const allocated = cycleId ? await getTotalAllocated(s.id, cycleId) : 0;
-    const revoked = cycleId ? await getTotalRevoked(s.id, cycleId) : 0;
+    const revoked   = cycleId ? await getTotalRevoked(s.id, cycleId) : 0;
     const available = cycleId ? await getAvailableBalance(s.id, cycleId) : 0;
-    const pct = cycleId ? await getUtilizationPct(s.id, cycleId) : 0;
+    const pct       = cycleId ? await getUtilizationPct(s.id, cycleId) : 0;
     return { sectorId: s.id, sectorName: s.name, allocated, revoked, netAllocated: allocated - revoked, available, utilizationPct: pct };
   }));
+
   res.json(result);
 });
 
+// ── Allocation Timeline ───────────────────────────────────────────────────────
+
 router.get("/dashboard/allocation-timeline", requireAuth, async (req, res): Promise<void> => {
-  const cycleIdParam = req.query.cycleId ? parseInt(req.query.cycleId as string) : null;
+  const user = (req as any).user;
+  const cycleId = req.query.cycleId ? parseInt(req.query.cycleId as string) : await getActiveCycleId();
   const days = parseInt(req.query.days as string || "30");
-  const cycleId = cycleIdParam ?? await getActiveCycleId();
   if (!cycleId) { res.json([]); return; }
 
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
 
-  // Only top-level allocations (fromSectorId IS NULL) so cumulative stays within budget bounds
-  const allocs = await db.select().from(allocationsTable)
-    .where(and(eq(allocationsTable.budgetCycleId, cycleId), gte(allocationsTable.allocatedAt, cutoff), sql`${allocationsTable.fromSectorId} IS NULL`))
-    .orderBy(allocationsTable.allocatedAt);
+  const scopeSectorId = getUserScopeId(user);
 
-  // Group by date
+  // Global: top-level allocations (fromSectorId IS NULL) — no double-count
+  // Scoped: allocations FROM the user's own sector (what they distributed)
+  const allocs = scopeSectorId === null
+    ? await db.select().from(allocationsTable)
+        .where(and(eq(allocationsTable.budgetCycleId, cycleId), gte(allocationsTable.allocatedAt, cutoff), sql`${allocationsTable.fromSectorId} IS NULL`))
+        .orderBy(allocationsTable.allocatedAt)
+    : await db.select().from(allocationsTable)
+        .where(and(eq(allocationsTable.budgetCycleId, cycleId), gte(allocationsTable.allocatedAt, cutoff), eq(allocationsTable.fromSectorId, scopeSectorId)))
+        .orderBy(allocationsTable.allocatedAt);
+
   const byDate = new Map<string, { totalAllocated: number; totalRevoked: number; count: number }>();
   for (const a of allocs) {
     const dateKey = a.allocatedAt.toISOString().split("T")[0];
@@ -132,9 +181,15 @@ router.get("/dashboard/allocation-timeline", requireAuth, async (req, res): Prom
   res.json(result);
 });
 
+// ── Recent Activity ───────────────────────────────────────────────────────────
+
 router.get("/dashboard/recent-activity", requireAuth, async (req, res): Promise<void> => {
+  const user = (req as any).user;
   const limit = parseInt(req.query.limit as string || "20");
-  const logs = await db.select().from(auditLogsTable).orderBy(desc(auditLogsTable.createdAt)).limit(limit);
+  const scopeSectorId = getUserScopeId(user);
+
+  const logs = await db.select().from(auditLogsTable).orderBy(desc(auditLogsTable.createdAt)).limit(scopeSectorId !== null ? 200 : limit);
+
   const enriched = await Promise.all(logs.map(async log => {
     const u = await db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable).where(eq(usersTable.id, log.userId)).limit(1);
     const userName = u[0]?.name ?? "Unknown";
@@ -148,32 +203,69 @@ router.get("/dashboard/recent-activity", requireAuth, async (req, res): Promise<
         ? `Allocated KES ${Number(meta.amount).toLocaleString()} to ${sectorName}`
         : `Revoked allocation of KES ${Number(meta.amount).toLocaleString()} from ${sectorName}`;
     }
-    return { id: log.id, action: log.action, description, userId: log.userId, userName, amount: meta?.amount ? Number(meta.amount) : null, sectorName, createdAt: log.createdAt };
+    return { id: log.id, action: log.action, description, userId: log.userId, userName, amount: meta?.amount ? Number(meta.amount) : null, sectorName, createdAt: log.createdAt, _toSectorId: meta?.toSectorId ?? null, _sectorId: meta?.sectorId ?? null };
   }));
-  res.json(enriched);
+
+  let filtered = enriched;
+  if (scopeSectorId !== null) {
+    const subtreeIds = await getSubtreeIds(scopeSectorId);
+    filtered = enriched.filter(e =>
+      (e._toSectorId !== null && subtreeIds.includes(e._toSectorId)) ||
+      (e._sectorId   !== null && subtreeIds.includes(e._sectorId))   ||
+      e.userId === user.id
+    );
+  }
+
+  // Strip internal fields and trim to limit
+  const result = filtered.slice(0, limit).map(({ _toSectorId, _sectorId, ...rest }) => rest);
+  res.json(result);
 });
 
+// ── Balance Breakdown ─────────────────────────────────────────────────────────
+
 router.get("/dashboard/balance-breakdown", requireAuth, async (req, res): Promise<void> => {
-  const cycleIdParam = req.query.cycleId ? parseInt(req.query.cycleId as string) : null;
-  const cycleId = cycleIdParam ?? await getActiveCycleId();
+  const user = (req as any).user;
+  const cycleId = req.query.cycleId ? parseInt(req.query.cycleId as string) : await getActiveCycleId();
   if (!cycleId) {
     res.json({ totalBudget: 0, totalAllocated: 0, totalRevoked: 0, netAllocated: 0, availableBalance: 0, utilizationPct: 0, pendingCount: 0, activeCount: 0, revokedCount: 0 }); return;
   }
   const cycle = await db.select().from(budgetCyclesTable).where(eq(budgetCyclesTable.id, cycleId)).limit(1);
   if (!cycle[0]) { res.status(404).json({ error: "Not Found" }); return; }
-  const totalBudget = parseFloat(cycle[0].totalBudget);
 
-  // Only count top-level allocations (fromSectorId IS NULL) to avoid double-counting sub-flows
-  const allocs = await db.select().from(allocationsTable).where(and(eq(allocationsTable.budgetCycleId, cycleId), sql`${allocationsTable.fromSectorId} IS NULL`));
-  let totalAllocated = 0, totalRevoked = 0, pendingCount = 0, activeCount = 0, revokedCount = 0;
-  for (const a of allocs) {
-    if (a.status === "revoked") { totalRevoked += parseFloat(a.amount); revokedCount++; }
-    else if (a.status === "active") { totalAllocated += parseFloat(a.amount); activeCount++; }
-    else if (a.status === "pending") { totalAllocated += parseFloat(a.amount); pendingCount++; }
+  const scopeSectorId = getUserScopeId(user);
+  let totalBudget = 0, totalAllocated = 0, totalRevoked = 0, pendingCount = 0, activeCount = 0, revokedCount = 0;
+
+  if (scopeSectorId === null) {
+    // Global: cycle total budget, top-level allocations only
+    totalBudget = parseFloat(cycle[0].totalBudget);
+    const allocs = await db.select().from(allocationsTable)
+      .where(and(eq(allocationsTable.budgetCycleId, cycleId), sql`${allocationsTable.fromSectorId} IS NULL`));
+    for (const a of allocs) {
+      if (a.status === "revoked")  { totalRevoked   += parseFloat(a.amount); revokedCount++; }
+      else if (a.status === "active")  { totalAllocated += parseFloat(a.amount); activeCount++; }
+      else if (a.status === "pending") { totalAllocated += parseFloat(a.amount); pendingCount++; }
+    }
+  } else {
+    // Scoped: their "budget" is what they received; their "allocated" is what they sent out
+    totalBudget    = await getNetAllocated(scopeSectorId, cycleId);
+    totalAllocated = await getTotalAllocatedFrom(scopeSectorId, cycleId);
+
+    // Count statuses for allocations FROM this sector
+    const allocs = await db.select().from(allocationsTable)
+      .where(and(eq(allocationsTable.budgetCycleId, cycleId), eq(allocationsTable.fromSectorId, scopeSectorId)));
+    for (const a of allocs) {
+      if (a.status === "revoked")  revokedCount++;
+      else if (a.status === "active")  activeCount++;
+      else if (a.status === "pending") pendingCount++;
+    }
   }
-  const netAllocated = totalAllocated - totalRevoked;
-  const availableBalance = totalBudget - totalAllocated;
+
+  const netAllocated   = totalAllocated - totalRevoked;
+  const availableBalance = scopeSectorId === null
+    ? totalBudget - totalAllocated
+    : await getAvailableBalance(scopeSectorId, cycleId);
   const utilizationPct = totalBudget > 0 ? Math.min(100, (totalAllocated / totalBudget) * 100) : 0;
+
   res.json({ totalBudget, totalAllocated, totalRevoked, netAllocated, availableBalance, utilizationPct, pendingCount, activeCount, revokedCount });
 });
 

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db, allocationsTable, revocationsTable, sectorsTable, usersTable, budgetCyclesTable, auditLogsTable } from "@workspace/db";
 import { eq, and, inArray } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
-import { getAvailableBalance } from "../lib/budget-calc";
+import { getAvailableBalance, getSubtreeIds, getUserScopeId } from "../lib/budget-calc";
 
 const router = Router();
 
@@ -27,14 +27,26 @@ async function enrichAllocation(alloc: any) {
 }
 
 router.get("/allocations", requireAuth, async (req, res): Promise<void> => {
+  const user = (req as any).user;
   const { cycleId, sectorId, status } = req.query;
   const conditions: any[] = [];
   if (cycleId) conditions.push(eq(allocationsTable.budgetCycleId, parseInt(cycleId as string)));
   if (sectorId) conditions.push(eq(allocationsTable.toSectorId, parseInt(sectorId as string)));
   if (status) conditions.push(eq(allocationsTable.status, status as any));
-  const allocs = conditions.length > 0
+  let allocs = conditions.length > 0
     ? await db.select().from(allocationsTable).where(and(...conditions)).orderBy(allocationsTable.createdAt)
     : await db.select().from(allocationsTable).orderBy(allocationsTable.createdAt);
+
+  // Scope: only show allocations involving the user's sector subtree
+  const scopeSectorId = getUserScopeId(user);
+  if (scopeSectorId !== null) {
+    const subtreeIds = await getSubtreeIds(scopeSectorId);
+    allocs = allocs.filter(a =>
+      subtreeIds.includes(a.toSectorId) ||
+      (a.fromSectorId !== null && subtreeIds.includes(a.fromSectorId))
+    );
+  }
+
   const enriched = await Promise.all(allocs.map(enrichAllocation));
   res.json(enriched);
 });

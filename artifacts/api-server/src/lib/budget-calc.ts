@@ -1,5 +1,29 @@
-import { db, allocationsTable, budgetCyclesTable, purchaseOrdersTable } from "@workspace/db";
+import { db, allocationsTable, budgetCyclesTable, purchaseOrdersTable, sectorsTable } from "@workspace/db";
 import { eq, and, inArray, sql } from "drizzle-orm";
+
+/** Returns all descendant sector IDs (inclusive of the root) */
+export async function getSubtreeIds(rootId: number): Promise<number[]> {
+  const all = await db.select({ id: sectorsTable.id, parentId: sectorsTable.parentId }).from(sectorsTable);
+  const ids: number[] = [rootId];
+  const queue = [rootId];
+  while (queue.length) {
+    const cur = queue.shift()!;
+    const children = all.filter(s => s.parentId === cur).map(s => s.id);
+    ids.push(...children);
+    queue.push(...children);
+  }
+  return ids;
+}
+
+/**
+ * Returns the effective scope sector ID for a user.
+ * super_admin and ceo roles get global scope (null = entire national pool).
+ * Everyone else is scoped to their own sector subtree.
+ */
+export function getUserScopeId(user: { role: string; sectorId: number | null }): number | null {
+  if (!user.sectorId || ['super_admin', 'ceo'].includes(user.role)) return null;
+  return user.sectorId;
+}
 
 export async function getTotalAllocated(sectorId: number, cycleId: number): Promise<number> {
   const result = await db

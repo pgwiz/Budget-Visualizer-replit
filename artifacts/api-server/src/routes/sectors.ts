@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db, sectorsTable, usersTable, allocationsTable, budgetCyclesTable } from "@workspace/db";
 import { eq, and, inArray, sql, isNull } from "drizzle-orm";
 import { requireAuth, requireRole } from "../lib/auth";
-import { getNetAllocated, getTotalAllocated, getTotalRevoked, getTotalAllocatedFrom, getAvailableBalance, getUtilizationPct } from "../lib/budget-calc";
+import { getNetAllocated, getTotalAllocated, getTotalRevoked, getTotalAllocatedFrom, getAvailableBalance, getUtilizationPct, getSubtreeIds, getUserScopeId } from "../lib/budget-calc";
 
 const router = Router();
 
@@ -69,15 +69,35 @@ async function buildTreeNode(sector: any, cycleId: number | null, allSectors: an
 router.get("/sectors", requireAuth, async (req, res): Promise<void> => {
   const user = (req as any).user;
   const cycleId = await getActiveCycleId();
-  const allSectors = await db.select().from(sectorsTable).orderBy(sectorsTable.sortOrder, sectorsTable.name);
+  let allSectors = await db.select().from(sectorsTable).orderBy(sectorsTable.sortOrder, sectorsTable.name);
+  // Scope: non-executive users only see their subtree
+  const scopeSectorId = getUserScopeId(user);
+  if (scopeSectorId !== null) {
+    const subtreeIds = await getSubtreeIds(scopeSectorId);
+    allSectors = allSectors.filter(s => subtreeIds.includes(s.id));
+  }
   const enriched = await Promise.all(allSectors.map(s => enrichSector(s, cycleId)));
   res.json(enriched);
 });
 
 router.get("/sectors/tree", requireAuth, async (req, res): Promise<void> => {
+  const user = (req as any).user;
   const cycleIdParam = req.query.cycleId ? parseInt(req.query.cycleId as string) : null;
   const cycleId = cycleIdParam ?? await getActiveCycleId();
   const allSectors = await db.select().from(sectorsTable).orderBy(sectorsTable.sortOrder, sectorsTable.name);
+
+  const scopeSectorId = getUserScopeId(user);
+  if (scopeSectorId !== null) {
+    // Return tree rooted at user's sector only
+    const node = await buildTreeNode(
+      allSectors.find(s => s.id === scopeSectorId) ?? allSectors[0],
+      cycleId,
+      allSectors,
+    );
+    res.json([node]);
+    return;
+  }
+
   const roots = allSectors.filter(s => s.parentId === null);
   const tree = await Promise.all(roots.map(r => buildTreeNode(r, cycleId, allSectors)));
   res.json(tree);
