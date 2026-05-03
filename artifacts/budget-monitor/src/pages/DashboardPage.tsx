@@ -58,21 +58,32 @@ export default function DashboardPage() {
   /* ── derived data ── */
   const utilizationPct = summary?.utilizationPct ?? 0;
 
-  // Pie: only include slices with positive value so Recharts renders correctly
+  // Pie: build slices that always match the legend exactly.
+  // When available < 0 (over-allocated), show an explicit "Over-allocated" red wedge
+  // instead of silently clamping to 0 and showing 100% for one slice.
   const balancePieData = balanceData
     ? (() => {
-        const totalBudget = balanceData.totalBudget;
-        const allocated  = Math.min(balanceData.totalAllocated, totalBudget);   // cap at 100%
-        const revoked    = Math.max(0, balanceData.totalRevoked);
-        const available  = Math.max(0, totalBudget - allocated);
-        const items = [
-          { name: 'Allocated', value: allocated,  color: '#3b82f6' },
-          { name: 'Available', value: available,  color: '#10b981' },
-          { name: 'Revoked',   value: revoked,    color: '#ef4444' },
+        const budget    = balanceData.totalBudget;
+        const allocated = balanceData.totalAllocated;
+        const revoked   = Math.max(0, balanceData.totalRevoked);
+        const available = balanceData.availableBalance;          // may be negative
+
+        if (budget <= 0) return [{ name: 'No Budget', value: 1, color: 'rgba(255,255,255,0.06)', rawValue: 0 }];
+
+        if (available < 0) {
+          // Over-allocated: fill the whole ring with Allocated (blue) + excess (red)
+          return [
+            { name: 'Allocated',     value: budget,               color: '#3b82f6', rawValue: allocated },
+            { name: 'Over-allocated',value: Math.abs(available),  color: '#ef4444', rawValue: available },
+            ...(revoked > 0 ? [{ name: 'Revoked', value: revoked, color: '#f59e0b', rawValue: revoked }] : []),
+          ];
+        }
+
+        return [
+          { name: 'Allocated', value: Math.max(0, allocated), color: '#3b82f6', rawValue: allocated },
+          { name: 'Available', value: Math.max(0, available), color: '#10b981', rawValue: available },
+          ...(revoked > 0 ? [{ name: 'Revoked', value: revoked, color: '#f59e0b', rawValue: revoked }] : []),
         ].filter((d) => d.value > 0);
-        return items.length > 0
-          ? items
-          : [{ name: 'No Data', value: 1, color: 'rgba(255,255,255,0.06)' }];
       })()
     : [];
 
@@ -220,24 +231,29 @@ export default function DashboardPage() {
 
           {/* Donut centre label */}
           <div className="flex flex-col items-center -mt-4 mb-4">
-            <span className="text-xl font-bold text-white">{Math.round(utilizationPct)}%</span>
-            <span className="text-[10px] uppercase tracking-widest text-white/30">utilized</span>
+            {utilizationPct > 100 ? (
+              <>
+                <span className="text-xl font-bold text-rose-400">OVER</span>
+                <span className="text-[10px] uppercase tracking-widest text-rose-400/60">allocated</span>
+              </>
+            ) : (
+              <>
+                <span className="text-xl font-bold text-white">{Math.round(utilizationPct)}%</span>
+                <span className="text-[10px] uppercase tracking-widest text-white/30">utilized</span>
+              </>
+            )}
           </div>
 
-          {/* Legend rows — always use raw balanceData so values are accurate */}
+          {/* Legend — derived from the same balancePieData driving the pie, so they always match */}
           <div className="space-y-3 mt-2">
-            {balanceData && [
-              { name: 'Allocated', value: balanceData.totalAllocated,  color: '#3b82f6' },
-              { name: 'Available', value: balanceData.availableBalance, color: '#10b981' },
-              { name: 'Revoked',   value: balanceData.totalRevoked,     color: '#ef4444' },
-            ].map((item) => (
+            {balancePieData.map((item) => (
               <div key={item.name} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
                   <span className="text-xs text-white/60">{item.name}</span>
                 </div>
-                <span className={`text-xs font-bold ${item.value < 0 ? 'text-rose-400' : 'text-white'}`}>
-                  {formatCurrency(item.value)}
+                <span className={`text-xs font-bold ${(item.rawValue ?? item.value) < 0 ? 'text-rose-400' : 'text-white'}`}>
+                  {formatCurrency(item.rawValue ?? item.value)}
                 </span>
               </div>
             ))}
@@ -262,7 +278,7 @@ export default function DashboardPage() {
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
               <XAxis dataKey="date" stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} />
-              <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v / 1e6).toFixed(0)}M`} />
+              <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v: number) => { if (v >= 1e9) return `${(v/1e9).toFixed(1)}B`; if (v >= 1e6) return `${(v/1e6).toFixed(0)}M`; if (v >= 1e3) return `${(v/1e3).toFixed(0)}K`; return `${v}`; }} />
               <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => formatCurrency(v)} />
               <Legend wrapperStyle={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', paddingTop: 8 }} />
               <Area type="monotone" dataKey="cumulativeAllocated" name="Cumulative Allocated" stroke="#3b82f6" fill="url(#gradAlloc)" strokeWidth={2} dot={false} />
