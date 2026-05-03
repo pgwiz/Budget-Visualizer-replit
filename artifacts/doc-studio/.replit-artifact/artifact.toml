@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/doc-studio/"
+title = "DocStudio — Document Generator"
+version = "1.0.0"
+id = "artifacts/doc-studio"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/doc-studio/" ]
+localPort = 23612
+
+[services.development]
+run = "pnpm --filter @workspace/doc-studio run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/doc-studio", "run", "build" ]
+publicDir = "artifacts/doc-studio/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23612"
+BASE_PATH = "/doc-studio/"
