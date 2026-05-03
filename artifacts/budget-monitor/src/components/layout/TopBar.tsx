@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from '@/hooks/useAuth';
-import { useLogout, getGetMeQueryKey } from '@workspace/api-client-react';
+import { useLogout } from '@workspace/api-client-react';
 import { queryClient } from '@/lib/api';
 import { useSidebar } from '@/context/sidebar';
 
@@ -40,14 +40,19 @@ const PAGE_LABELS: Record<string, string> = {
 };
 
 export function TopBar() {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const { user, isSuperAdmin } = useAuth();
   const { toggle } = useSidebar();
 
   const logoutMutation = useLogout({
     mutation: {
       onSuccess: () => {
-        queryClient.removeQueries({ queryKey: getGetMeQueryKey() });
+        queryClient.clear();
+        navigate('/login');
+      },
+      onError: () => {
+        queryClient.clear();
+        navigate('/login');
       },
     },
   });
@@ -127,7 +132,8 @@ export function TopBar() {
               onClick={() => logoutMutation.mutate()}
               className="focus:bg-rose-400/10 text-rose-400 focus:text-rose-400 cursor-pointer gap-2"
             >
-              <LogOut size={14} /> Sign out
+              <LogOut size={14} />
+              {logoutMutation.isPending ? 'Signing out…' : 'Sign out'}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
