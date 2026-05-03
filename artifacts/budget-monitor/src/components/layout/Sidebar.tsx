@@ -12,12 +12,21 @@ import {
 import { Link, useLocation } from 'wouter';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
-import { useLogout } from '@workspace/api-client-react';
+import { useLogout, getGetMeQueryKey } from '@workspace/api-client-react';
+import { queryClient } from '@/lib/api';
 
 export function Sidebar() {
   const [location] = useLocation();
   const { user, isSuperAdmin, isCeo } = useAuth();
-  const logoutMutation = useLogout();
+  const [, navigate] = useLocation();
+  const logoutMutation = useLogout({
+    mutation: {
+      onSuccess: () => {
+        queryClient.removeQueries({ queryKey: getGetMeQueryKey() });
+        navigate('/login');
+      },
+    },
+  });
 
   const navItems = [
     { href: '/',          label: 'Home',      icon: Home,            show: true },
