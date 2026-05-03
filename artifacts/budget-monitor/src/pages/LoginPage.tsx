@@ -266,10 +266,26 @@ export default function LoginPage() {
             </form>
 
             {/* Demo credentials hint */}
-            <div className="pt-2 border-t border-white/5">
-              <p className="text-white/20 text-[11px] text-center leading-relaxed">
-                Demo: <span className="text-white/35 font-mono">admin@budget.go.ke</span> · password: <span className="text-white/35 font-mono">password</span>
-              </p>
+            <div className="pt-2 border-t border-white/5 space-y-1.5">
+              <p className="text-white/15 text-[10px] text-center uppercase tracking-wider font-bold">Demo Accounts · password: password</p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {[
+                  { email: 'admin@tvetauthority.go.ke', role: 'Sys Admin', color: '#f87171' },
+                  { email: 'dg@tvetauthority.go.ke',    role: 'Director General', color: '#fbbf24' },
+                  { email: 'principal@tonp.ac.ke',      role: 'Principal TONP', color: '#60a5fa' },
+                  { email: 'hod.ict@tonp.ac.ke',        role: 'HOD ICT', color: '#34d399' },
+                ].map(a => (
+                  <button
+                    key={a.email}
+                    type="button"
+                    onClick={() => { setEmail(a.email); setPassword('password'); }}
+                    className="text-left px-2.5 py-1.5 rounded-lg border border-white/8 hover:border-white/20 bg-white/3 hover:bg-white/6 transition-all"
+                  >
+                    <p className="text-[9px] font-bold uppercase tracking-wider" style={{ color: a.color }}>{a.role}</p>
+                    <p className="text-[9px] text-white/30 font-mono truncate">{a.email}</p>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
