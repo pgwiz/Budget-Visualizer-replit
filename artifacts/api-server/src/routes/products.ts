@@ -18,11 +18,11 @@ router.get("/products", requireAuth, async (req, res): Promise<void> => {
   res.json(rows.map(serialize));
 });
 
-/* Create product (admin / ceo only) */
+/* Create product (admin only) */
 router.post("/products", requireAuth, async (req, res): Promise<void> => {
   const user = (req as any).user;
-  if (!["super_admin", "ceo"].includes(user.role)) {
-    res.status(403).json({ error: "Forbidden", message: "Admin only" }); return;
+  if (user.role !== "super_admin") {
+    res.status(403).json({ error: "Forbidden", message: "System Administrator only" }); return;
   }
   const { name, category, unit, unitPrice, description, isActive, sortOrder } = req.body;
   if (!name || !category || !unit || unitPrice == null) {
@@ -38,11 +38,11 @@ router.post("/products", requireAuth, async (req, res): Promise<void> => {
   res.status(201).json(serialize(created));
 });
 
-/* Update product (admin / ceo only) */
+/* Update product (admin only) */
 router.put("/products/:productId", requireAuth, async (req, res): Promise<void> => {
   const user = (req as any).user;
-  if (!["super_admin", "ceo"].includes(user.role)) {
-    res.status(403).json({ error: "Forbidden", message: "Admin only" }); return;
+  if (user.role !== "super_admin") {
+    res.status(403).json({ error: "Forbidden", message: "System Administrator only" }); return;
   }
   const id = parseInt(req.params['productId'] as string);
   const { name, category, unit, unitPrice, description, isActive, sortOrder } = req.body;
@@ -61,11 +61,11 @@ router.put("/products/:productId", requireAuth, async (req, res): Promise<void> 
   res.json(serialize(updated));
 });
 
-/* Delete product (admin / ceo only) */
+/* Delete product (admin only) */
 router.delete("/products/:productId", requireAuth, async (req, res): Promise<void> => {
   const user = (req as any).user;
-  if (!["super_admin", "ceo"].includes(user.role)) {
-    res.status(403).json({ error: "Forbidden", message: "Admin only" }); return;
+  if (user.role !== "super_admin") {
+    res.status(403).json({ error: "Forbidden", message: "System Administrator only" }); return;
   }
   const id = parseInt(req.params['productId'] as string);
   await db.delete(productsTable).where(eq(productsTable.id, id));

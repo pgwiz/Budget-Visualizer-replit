@@ -130,8 +130,8 @@ function ProductRow({ product, canEdit, onEdit, onDelete }: { product: Product; 
 
 /* ─── Main page ────────────────────────────────────────────── */
 export default function CatalogPage() {
-  const { isSuperAdmin, isCeo } = useAuth();
-  const canEdit = isSuperAdmin || isCeo;
+  const { isSuperAdmin } = useAuth();
+  const canEdit = isSuperAdmin;
   const [search, setSearch]       = useState('');
   const [adding, setAdding]       = useState(false);
   const [editId, setEditId]       = useState<number | null>(null);

@@ -18,7 +18,7 @@ export default function SectorsPage() {
   const { data: tree, isLoading: treeLoading } = useGetSectorTree();
   const { data: cycle } = useGetActiveCycle();
   const { data: summary } = useGetDashboardSummary();
-  const { isSuperAdmin, isCeo } = useAuth();
+  const { isSuperAdmin } = useAuth();
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -34,7 +34,7 @@ export default function SectorsPage() {
               <span className="text-sm text-white/70">Active: <span className="text-white font-semibold">{cycle.name}</span></span>
             </div>
           )}
-          {(isSuperAdmin || isCeo) && (
+          {isSuperAdmin && (
             <Link href="/hierarchy-designer">
               <a className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-400 text-sm font-semibold transition-all">
                 <Workflow size={15} />
