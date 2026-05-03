@@ -1,7 +1,7 @@
-import { useState } from 'react';
 import { useListSectors, useGetSectorTree, useGetActiveCycle, useGetDashboardSummary } from '@workspace/api-client-react';
 import { SectorTree } from '@/components/sectors/SectorTree';
 import { BudgetHierarchyTree } from '@/components/hierarchy/BudgetHierarchyTree';
+import { OrgChart } from '@/components/orgchart/OrgChart';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -9,32 +9,48 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { formatCurrency } from '@/lib/api';
 import { Badge } from '@/components/ui/badge';
-import { LayoutList, Network, GitBranch } from 'lucide-react';
+import { LayoutList, Network, GitBranch, Share2, Workflow } from 'lucide-react';
 import { Link } from 'wouter';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function SectorsPage() {
   const { data: sectors, isLoading: listLoading } = useListSectors();
   const { data: tree, isLoading: treeLoading } = useGetSectorTree();
   const { data: cycle } = useGetActiveCycle();
   const { data: summary } = useGetDashboardSummary();
+  const { isSuperAdmin, isCeo } = useAuth();
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h2 className="text-3xl font-bold text-white">Sectors</h2>
           <p className="text-white/40 mt-1">Government structure and budget distribution</p>
         </div>
-        {cycle && (
-          <div className="glass px-4 py-2 rounded-xl flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-sm text-white/70">Active: <span className="text-white font-semibold">{cycle.name}</span></span>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {cycle && (
+            <div className="glass px-4 py-2 rounded-xl flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-sm text-white/70">Active: <span className="text-white font-semibold">{cycle.name}</span></span>
+            </div>
+          )}
+          {(isSuperAdmin || isCeo) && (
+            <Link href="/hierarchy-designer">
+              <a className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-400 text-sm font-semibold transition-all">
+                <Workflow size={15} />
+                Designer
+              </a>
+            </Link>
+          )}
+        </div>
       </div>
 
-      <Tabs defaultValue="hierarchy" className="w-full">
+      <Tabs defaultValue="orgchart" className="w-full">
         <TabsList className="glass border-white/10 p-1 mb-6">
+          <TabsTrigger value="orgchart" className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400 gap-2">
+            <Share2 size={15} />
+            Org Chart
+          </TabsTrigger>
           <TabsTrigger value="hierarchy" className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400 gap-2">
             <GitBranch size={15} />
             Hierarchy Map
@@ -48,6 +64,21 @@ export default function SectorsPage() {
             List View
           </TabsTrigger>
         </TabsList>
+
+        {/* ── Org Chart ── */}
+        <TabsContent value="orgchart">
+          <GlassCard className="p-6 overflow-hidden">
+            {treeLoading ? (
+              <LoadingSpinner size={40} className="py-20" />
+            ) : (
+              <OrgChart
+                nodes={tree || []}
+                totalBudget={summary?.totalBudget ?? 0}
+                cycleName={cycle?.name}
+              />
+            )}
+          </GlassCard>
+        </TabsContent>
 
         {/* ── Hierarchy Map ── */}
         <TabsContent value="hierarchy">

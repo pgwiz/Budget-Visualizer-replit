@@ -5,7 +5,8 @@ import {
   RefreshCw, 
   Users, 
   FileText, 
-  LogOut 
+  LogOut,
+  Workflow,
 } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { cn } from '@/lib/utils';
@@ -20,6 +21,7 @@ export function Sidebar() {
   const navItems = [
     { href: '/', label: 'Dashboard', icon: LayoutDashboard, show: true },
     { href: '/sectors', label: 'Sectors', icon: Network, show: true },
+    { href: '/hierarchy-designer', label: 'Designer', icon: Workflow, show: isSuperAdmin || isCeo },
     { href: '/allocations', label: 'Allocations', icon: ArrowLeftRight, show: true },
     { href: '/cycles', label: 'Cycles', icon: RefreshCw, show: isSuperAdmin },
     { href: '/users', label: 'Users', icon: Users, show: isSuperAdmin || isCeo },

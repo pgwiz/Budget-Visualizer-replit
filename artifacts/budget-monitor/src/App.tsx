@@ -15,6 +15,7 @@ import AllocationsPage from "@/pages/AllocationsPage";
 import CyclesPage from "@/pages/CyclesPage";
 import UsersPage from "@/pages/UsersPage";
 import ReportsPage from "@/pages/ReportsPage";
+import HierarchyDesignerPage from "@/pages/HierarchyDesignerPage";
 import NotFound from "@/pages/not-found";
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
@@ -66,6 +67,9 @@ function Routes() {
       </Route>
       <Route path="/sectors/:id">
         {(params) => <ProtectedRoute component={SectorDetailPage} id={params.id} />}
+      </Route>
+      <Route path="/hierarchy-designer">
+        <ProtectedRoute component={HierarchyDesignerPage} roles={['super_admin', 'ceo']} />
       </Route>
       <Route path="/allocations">
         <ProtectedRoute component={AllocationsPage} />
