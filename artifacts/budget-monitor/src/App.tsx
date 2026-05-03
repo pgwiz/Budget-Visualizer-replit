@@ -8,6 +8,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
 import LoginPage from "@/pages/LoginPage";
+import HomePage from "@/pages/HomePage";
 import DashboardPage from "@/pages/DashboardPage";
 import SectorsPage from "@/pages/SectorsPage";
 import SectorDetailPage from "@/pages/SectorDetailPage";
@@ -60,6 +61,9 @@ function Routes() {
     <Switch>
       <Route path="/login" component={LoginPage} />
       <Route path="/">
+        <ProtectedRoute component={HomePage} />
+      </Route>
+      <Route path="/dashboard">
         <ProtectedRoute component={DashboardPage} />
       </Route>
       <Route path="/sectors">

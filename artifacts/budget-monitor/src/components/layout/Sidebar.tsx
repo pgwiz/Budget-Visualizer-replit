@@ -1,4 +1,5 @@
 import { 
+  Home,
   LayoutDashboard, 
   Network, 
   ArrowLeftRight, 
@@ -19,7 +20,8 @@ export function Sidebar() {
   const logoutMutation = useLogout();
 
   const navItems = [
-    { href: '/', label: 'Dashboard', icon: LayoutDashboard, show: true },
+    { href: '/',          label: 'Home',      icon: Home,            show: true },
+    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, show: true },
     { href: '/sectors', label: 'Sectors', icon: Network, show: true },
     { href: '/hierarchy-designer', label: 'Designer', icon: Workflow, show: isSuperAdmin || isCeo },
     { href: '/allocations', label: 'Allocations', icon: ArrowLeftRight, show: true },
