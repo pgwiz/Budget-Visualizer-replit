@@ -4,7 +4,7 @@ import { ChevronDown, ChevronRight, ZoomIn, ChevronUp } from 'lucide-react';
 import { SectorTreeNode } from '@workspace/api-client-react';
 import { UtilizationRing } from './UtilizationRing';
 import { NodeDetailPanel } from './NodeDetailPanel';
-import { formatCurrency } from '@/lib/api';
+import { formatCurrency, formatCompact } from '@/lib/api';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -65,7 +65,7 @@ function RootNode({
           <div className="text-base font-bold text-white mt-0.5">{cycleName || 'Government Budget'}</div>
           <div className="flex items-center gap-4 mt-1.5">
             <span className="text-xs text-white/50">
-              Budget: <span className="text-blue-300 font-semibold">{formatCurrency(totalBudget)}</span>
+              Budget: <span className="text-blue-300 font-semibold" title={formatCurrency(totalBudget)}>{formatCompact(totalBudget)}</span>
             </span>
             <span className="text-xs text-white/50">
               Sectors: <span className="text-blue-300 font-semibold">{nodeCount}</span>
@@ -159,12 +159,18 @@ function HierarchyNodeCard({ node, depth, isSelected, onSelect, defaultExpanded 
                     {node.code}
                   </Badge>
                 </div>
-                <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1.5">
+                <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
                   <span className="text-[10px] text-white/40">
-                    Allocated <span className="text-white/70 font-semibold">{formatCurrency(node.netAllocated)}</span>
+                    Received{' '}
+                    <span className="text-white/70 font-semibold" title={formatCurrency(node.netAllocated)}>
+                      {formatCompact(node.netAllocated)}
+                    </span>
                   </span>
                   <span className="text-[10px] text-white/40">
-                    Available <span className="text-emerald-400/80 font-semibold">{formatCurrency(node.availableBalance)}</span>
+                    Free{' '}
+                    <span className={`font-semibold ${node.availableBalance < 0 ? 'text-rose-400/80' : 'text-emerald-400/80'}`} title={formatCurrency(node.availableBalance)}>
+                      {formatCompact(node.availableBalance)}
+                    </span>
                   </span>
                 </div>
                 {/* Progress bar */}

@@ -4,7 +4,7 @@ import { useLocation } from 'wouter';
 import { SectorTreeNode } from '@workspace/api-client-react';
 import { UtilizationRing } from '@/components/hierarchy/UtilizationRing';
 import { OrgChartPopup } from './OrgChartPopup';
-import { formatCurrency } from '@/lib/api';
+import { formatCurrency, formatCompact } from '@/lib/api';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -192,11 +192,11 @@ function OrgNode({ ln, selected, onClick, animDelay }: OrgNodeProps) {
       <div className="grid grid-cols-2 gap-1.5">
         <div className="bg-white/5 rounded-xl p-2">
           <p className="text-[8px] uppercase tracking-wider text-white/30 font-bold">Received</p>
-          <p className="text-[10px] font-bold text-blue-400 mt-0.5 truncate">{formatCurrency(node.netAllocated)}</p>
+          <p className="text-[10px] font-bold text-blue-400 mt-0.5 truncate" title={formatCurrency(node.netAllocated)}>{formatCompact(node.netAllocated)}</p>
         </div>
         <div className="bg-white/5 rounded-xl p-2">
           <p className="text-[8px] uppercase tracking-wider text-white/30 font-bold">Available</p>
-          <p className="text-[10px] font-bold text-emerald-400 mt-0.5 truncate">{formatCurrency(node.availableBalance)}</p>
+          <p className={`text-[10px] font-bold mt-0.5 truncate ${node.availableBalance < 0 ? 'text-rose-400' : 'text-emerald-400'}`} title={formatCurrency(node.availableBalance)}>{formatCompact(node.availableBalance)}</p>
         </div>
       </div>
 
@@ -293,7 +293,7 @@ function RootBanner({
         <div className="flex-1 min-w-0">
           <p className="text-[9px] uppercase tracking-widest text-blue-400/60 font-bold">Active Cycle</p>
           <p className="text-sm font-bold text-white mt-0.5 truncate">{cycleName || 'Government Budget'}</p>
-          <p className="text-[10px] text-blue-300/70 mt-0.5">Total: {formatCurrency(totalBudget)}</p>
+          <p className="text-[10px] text-blue-300/70 mt-0.5">Total: {formatCompact(totalBudget)}</p>
         </div>
         <UtilizationRing value={pct} size={56} strokeWidth={4} />
       </motion.div>

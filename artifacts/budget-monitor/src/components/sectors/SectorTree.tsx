@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, ChevronDown, Network } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ProgressBar } from '@/components/ui/ProgressBar';
-import { formatCurrency } from '@/lib/api';
+import { formatCurrency, formatCompact } from '@/lib/api';
 import { SectorTreeNode } from '@workspace/api-client-react';
 import { cn } from '@/lib/utils';
 import { Link } from 'wouter';
@@ -55,10 +55,10 @@ function SectorNode({ node, depth }: { node: SectorTreeNode; depth: number }) {
                 </div>
                 <div className="flex items-center gap-4 mt-1">
                   <span className="text-xs text-white/40">
-                    Allocated: <span className="text-white/60">{formatCurrency(node.netAllocated)}</span>
+                    Allocated: <span className="text-white/60" title={formatCurrency(node.netAllocated)}>{formatCompact(node.netAllocated)}</span>
                   </span>
                   <span className="text-xs text-white/40">
-                    Available: <span className="text-white/60">{formatCurrency(node.availableBalance)}</span>
+                    Available: <span className={node.availableBalance < 0 ? 'text-rose-400' : 'text-white/60'} title={formatCurrency(node.availableBalance)}>{formatCompact(node.availableBalance)}</span>
                   </span>
                 </div>
               </div>

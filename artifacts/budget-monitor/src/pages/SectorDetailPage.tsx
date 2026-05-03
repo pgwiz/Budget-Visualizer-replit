@@ -71,7 +71,10 @@ export default function SectorDetailPage({ id }: { id: string }) {
   const pct = sector.utilizationPct ?? 0;
   const allocated = sector.netAllocated ?? 0;
   const available = sector.availableBalance ?? 0;
-  const total = allocated + available;
+  // Use clamped values for charts (Recharts can't render negative slices/bars)
+  const allocatedDisplay = Math.max(0, allocated);
+  const availableDisplay = Math.max(0, available);
+  const total = allocatedDisplay + availableDisplay;
 
   /* ── Recent allocations in/out ── */
   const recentAllocs = (allAllocations ?? []).slice(0, 8);
@@ -80,8 +83,8 @@ export default function SectorDetailPage({ id }: { id: string }) {
   const childrenBarData = subtreeChildren.slice(0, 8).map((c) => ({
     name: c.code ?? c.name?.slice(0, 8),
     fullName: c.name,
-    allocated: c.netAllocated,
-    available: c.availableBalance,
+    allocated: Math.max(0, c.netAllocated),
+    available: Math.max(0, c.availableBalance),
     pct: c.utilizationPct,
   }));
 
@@ -167,8 +170,8 @@ export default function SectorDetailPage({ id }: { id: string }) {
                 <PieChart>
                   <Pie
                     data={[
-                      { name: 'Allocated', value: allocated, color: '#3b82f6' },
-                      { name: 'Available', value: available, color: '#10b981' },
+                      { name: 'Distributed', value: allocatedDisplay, color: '#3b82f6' },
+                      { name: 'Available', value: availableDisplay, color: '#10b981' },
                     ]}
                     innerRadius={58}
                     outerRadius={80}
@@ -185,8 +188,8 @@ export default function SectorDetailPage({ id }: { id: string }) {
               </ResponsiveContainer>
               <div className="space-y-3 mt-2">
                 {[
-                  { label: 'Allocated', value: allocated, color: '#3b82f6' },
-                  { label: 'Available', value: available, color: '#10b981' },
+                  { label: 'Distributed', value: allocatedDisplay, rawValue: allocated, color: '#3b82f6' },
+                  { label: 'Available', value: availableDisplay, rawValue: available, color: available < 0 ? '#ef4444' : '#10b981' },
                 ].map((item) => (
                   <div key={item.label}>
                     <div className="flex items-center justify-between mb-1">
@@ -194,7 +197,7 @@ export default function SectorDetailPage({ id }: { id: string }) {
                         <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
                         <span className="text-xs text-white/60">{item.label}</span>
                       </div>
-                      <span className="text-xs font-bold text-white">
+                      <span className={`text-xs font-bold ${item.rawValue < 0 ? 'text-rose-400' : 'text-white'}`}>
                         {total > 0 ? Math.round((item.value / total) * 100) : 0}%
                       </span>
                     </div>
@@ -204,7 +207,9 @@ export default function SectorDetailPage({ id }: { id: string }) {
                         style={{ width: `${total > 0 ? (item.value / total) * 100 : 0}%`, backgroundColor: item.color }}
                       />
                     </div>
-                    <p className="text-[10px] text-white/30 mt-0.5">{formatCurrency(item.value)}</p>
+                    <p className={`text-[10px] mt-0.5 ${item.rawValue < 0 ? 'text-rose-400/70' : 'text-white/30'}`}>
+                      {formatCurrency(item.rawValue)}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -227,7 +232,7 @@ export default function SectorDetailPage({ id }: { id: string }) {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
                 <XAxis dataKey="date" stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} />
-                <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v / 1e6).toFixed(0)}M`} />
+                <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v: number) => { if (v >= 1e9) return `${(v/1e9).toFixed(1)}B`; if (v >= 1e6) return `${(v/1e6).toFixed(0)}M`; if (v >= 1e3) return `${(v/1e3).toFixed(0)}K`; return `${v}`; }} />
                 <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => formatCurrency(v)} />
                 <Area type="monotone" dataKey="cumulative" name="Cumulative" stroke="#3b82f6" fill="url(#gradSector)" strokeWidth={2} dot={false} />
               </AreaChart>
@@ -246,7 +251,7 @@ export default function SectorDetailPage({ id }: { id: string }) {
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={childrenBarData} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
-                <XAxis type="number" stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v / 1e6).toFixed(0)}M`} />
+                <XAxis type="number" stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v: number) => { if (v >= 1e9) return `${(v/1e9).toFixed(1)}B`; if (v >= 1e6) return `${(v/1e6).toFixed(0)}M`; if (v >= 1e3) return `${(v/1e3).toFixed(0)}K`; return `${v}`; }} />
                 <YAxis type="category" dataKey="name" stroke="rgba(255,255,255,0.4)" fontSize={10} tickLine={false} axisLine={false} width={36} />
                 <Tooltip
                   {...TOOLTIP_STYLE}
