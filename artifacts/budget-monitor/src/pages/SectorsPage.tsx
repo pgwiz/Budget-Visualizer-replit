@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { useListSectors, useGetSectorTree } from '@workspace/api-client-react';
+import { useListSectors, useGetSectorTree, useGetActiveCycle, useGetDashboardSummary } from '@workspace/api-client-react';
 import { SectorTree } from '@/components/sectors/SectorTree';
+import { BudgetHierarchyTree } from '@/components/hierarchy/BudgetHierarchyTree';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -8,12 +9,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { formatCurrency } from '@/lib/api';
 import { Badge } from '@/components/ui/badge';
-import { LayoutList, Network } from 'lucide-react';
+import { LayoutList, Network, GitBranch } from 'lucide-react';
 import { Link } from 'wouter';
 
 export default function SectorsPage() {
   const { data: sectors, isLoading: listLoading } = useListSectors();
   const { data: tree, isLoading: treeLoading } = useGetSectorTree();
+  const { data: cycle } = useGetActiveCycle();
+  const { data: summary } = useGetDashboardSummary();
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -22,20 +25,57 @@ export default function SectorsPage() {
           <h2 className="text-3xl font-bold text-white">Sectors</h2>
           <p className="text-white/40 mt-1">Government structure and budget distribution</p>
         </div>
+        {cycle && (
+          <div className="glass px-4 py-2 rounded-xl flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-sm text-white/70">Active: <span className="text-white font-semibold">{cycle.name}</span></span>
+          </div>
+        )}
       </div>
 
-      <Tabs defaultValue="list" className="w-full">
+      <Tabs defaultValue="hierarchy" className="w-full">
         <TabsList className="glass border-white/10 p-1 mb-6">
-          <TabsTrigger value="list" className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400 gap-2">
-            <LayoutList size={16} />
-            List View
+          <TabsTrigger value="hierarchy" className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400 gap-2">
+            <GitBranch size={15} />
+            Hierarchy Map
           </TabsTrigger>
           <TabsTrigger value="tree" className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400 gap-2">
-            <Network size={16} />
+            <Network size={15} />
             Tree View
+          </TabsTrigger>
+          <TabsTrigger value="list" className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400 gap-2">
+            <LayoutList size={15} />
+            List View
           </TabsTrigger>
         </TabsList>
 
+        {/* ── Hierarchy Map ── */}
+        <TabsContent value="hierarchy">
+          <GlassCard className="p-6">
+            {treeLoading ? (
+              <LoadingSpinner size={40} className="py-20" />
+            ) : (
+              <BudgetHierarchyTree
+                nodes={tree || []}
+                totalBudget={summary?.totalBudget ?? 0}
+                cycleName={cycle?.name}
+              />
+            )}
+          </GlassCard>
+        </TabsContent>
+
+        {/* ── Tree View (existing) ── */}
+        <TabsContent value="tree">
+          <GlassCard className="p-6">
+            {treeLoading ? (
+              <LoadingSpinner size={40} className="py-20" />
+            ) : (
+              <SectorTree nodes={tree || []} />
+            )}
+          </GlassCard>
+        </TabsContent>
+
+        {/* ── List View ── */}
         <TabsContent value="list">
           <GlassCard className="p-0 overflow-hidden">
             {listLoading ? (
@@ -72,8 +112,8 @@ export default function SectorsPage() {
                       </TableCell>
                       <TableCell className="w-48">
                         <div className="flex items-center gap-3">
-                          <ProgressBar 
-                            value={sector.utilizationPct || 0} 
+                          <ProgressBar
+                            value={sector.utilizationPct || 0}
                             className="flex-1"
                             color={(sector.utilizationPct || 0) > 90 ? 'danger' : (sector.utilizationPct || 0) > 70 ? 'warning' : 'primary'}
                           />
@@ -86,16 +126,6 @@ export default function SectorsPage() {
                   ))}
                 </TableBody>
               </Table>
-            )}
-          </GlassCard>
-        </TabsContent>
-
-        <TabsContent value="tree">
-          <GlassCard className="p-6">
-            {treeLoading ? (
-              <LoadingSpinner size={40} className="py-20" />
-            ) : (
-              <SectorTree nodes={tree || []} />
             )}
           </GlassCard>
         </TabsContent>
