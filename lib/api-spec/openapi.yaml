@@ -3,20 +3,36 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Budget Monitor API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: users
+    description: User management
+  - name: sectors
+    description: Sector/department hierarchy
+  - name: cycles
+    description: Budget cycles
+  - name: allocations
+    description: Budget allocations
+  - name: revocations
+    description: Allocation revocations
+  - name: dashboard
+    description: Dashboard summaries
+  - name: reports
+    description: Reports and audit logs
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +40,676 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # AUTH
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout current session
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserWithSector"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # USERS
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List all users (admin only)
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserWithSector"
+
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Create a new user (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserBody"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserWithSector"
+
+  /users/{userId}:
+    get:
+      operationId: getUser
+      tags: [users]
+      summary: Get a user by ID
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserWithSector"
+
+    put:
+      operationId: updateUser
+      tags: [users]
+      summary: Update user (admin only)
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserBody"
+      responses:
+        "200":
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserWithSector"
+
+    delete:
+      operationId: deleteUser
+      tags: [users]
+      summary: Delete user (admin only)
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  # SECTORS
+  /sectors:
+    get:
+      operationId: listSectors
+      tags: [sectors]
+      summary: List all sectors visible to the current user
+      responses:
+        "200":
+          description: List of sectors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SectorWithStats"
+
+    post:
+      operationId: createSector
+      tags: [sectors]
+      summary: Create a new sector (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSectorBody"
+      responses:
+        "201":
+          description: Sector created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sector"
+
+  /sectors/tree:
+    get:
+      operationId: getSectorTree
+      tags: [sectors]
+      summary: Get full hierarchical sector tree with budget balances
+      parameters:
+        - name: cycleId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Hierarchical tree of sectors with balances
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SectorTreeNode"
+
+  /sectors/{sectorId}:
+    get:
+      operationId: getSector
+      tags: [sectors]
+      summary: Get a sector by ID
+      parameters:
+        - name: sectorId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Sector details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SectorWithStats"
+
+    put:
+      operationId: updateSector
+      tags: [sectors]
+      summary: Update a sector (admin only)
+      parameters:
+        - name: sectorId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSectorBody"
+      responses:
+        "200":
+          description: Sector updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sector"
+
+    delete:
+      operationId: deleteSector
+      tags: [sectors]
+      summary: Delete a sector (admin only)
+      parameters:
+        - name: sectorId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Sector deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /sectors/{sectorId}/tree:
+    get:
+      operationId: getSectorSubtree
+      tags: [sectors]
+      summary: Get tree for a specific sector with budget balances
+      parameters:
+        - name: sectorId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: cycleId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Sector subtree with balances
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SectorTreeNode"
+
+  # BUDGET CYCLES
+  /cycles:
+    get:
+      operationId: listCycles
+      tags: [cycles]
+      summary: List all budget cycles
+      responses:
+        "200":
+          description: List of cycles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BudgetCycle"
+
+    post:
+      operationId: createCycle
+      tags: [cycles]
+      summary: Create a budget cycle (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCycleBody"
+      responses:
+        "201":
+          description: Cycle created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetCycle"
+
+  /cycles/active:
+    get:
+      operationId: getActiveCycle
+      tags: [cycles]
+      summary: Get the currently active budget cycle
+      responses:
+        "200":
+          description: Active cycle
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetCycle"
+
+  /cycles/{cycleId}:
+    put:
+      operationId: updateCycle
+      tags: [cycles]
+      summary: Update a budget cycle (admin only)
+      parameters:
+        - name: cycleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCycleBody"
+      responses:
+        "200":
+          description: Cycle updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetCycle"
+
+  /cycles/{cycleId}/activate:
+    post:
+      operationId: activateCycle
+      tags: [cycles]
+      summary: Activate a budget cycle (deactivates all others)
+      parameters:
+        - name: cycleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Cycle activated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetCycle"
+
+  # ALLOCATIONS
+  /allocations:
+    get:
+      operationId: listAllocations
+      tags: [allocations]
+      summary: List allocations (filtered by user's scope)
+      parameters:
+        - name: cycleId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: sectorId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [pending, active, revoked, exhausted]
+      responses:
+        "200":
+          description: List of allocations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AllocationWithDetails"
+
+    post:
+      operationId: createAllocation
+      tags: [allocations]
+      summary: Allocate funds to a sector
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAllocationBody"
+      responses:
+        "201":
+          description: Allocation created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AllocationWithDetails"
+        "400":
+          description: Validation error (e.g. insufficient balance)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /allocations/{allocationId}:
+    get:
+      operationId: getAllocation
+      tags: [allocations]
+      summary: Get a specific allocation
+      parameters:
+        - name: allocationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Allocation details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AllocationWithDetails"
+
+  # REVOCATIONS
+  /allocations/{allocationId}/revoke:
+    post:
+      operationId: revokeAllocation
+      tags: [revocations]
+      summary: Revoke an allocation
+      parameters:
+        - name: allocationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RevokeAllocationBody"
+      responses:
+        "200":
+          description: Allocation revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AllocationWithDetails"
+        "400":
+          description: Already revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # DASHBOARD SUMMARIES
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary for current user (role-aware)
+      parameters:
+        - name: cycleId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/utilization-chart:
+    get:
+      operationId: getUtilizationChart
+      tags: [dashboard]
+      summary: Get sector utilization data for bar/pie charts
+      parameters:
+        - name: cycleId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: sectorId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Utilization chart data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UtilizationChartItem"
+
+  /dashboard/allocation-timeline:
+    get:
+      operationId: getAllocationTimeline
+      tags: [dashboard]
+      summary: Get allocation events over time for line chart
+      parameters:
+        - name: cycleId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: days
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 30
+      responses:
+        "200":
+          description: Timeline data points
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TimelineDataPoint"
+
+  /dashboard/recent-activity:
+    get:
+      operationId: getRecentActivity
+      tags: [dashboard]
+      summary: Get recent allocation/revocation activity feed
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Recent activity items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityItem"
+
+  /dashboard/balance-breakdown:
+    get:
+      operationId: getBalanceBreakdown
+      tags: [dashboard]
+      summary: Get budget balance breakdown (allocated, revoked, available)
+      parameters:
+        - name: cycleId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Balance breakdown
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BalanceBreakdown"
+
+  # REPORTS
+  /reports/audit-log:
+    get:
+      operationId: getAuditLog
+      tags: [reports]
+      summary: Get audit log with filters
+      parameters:
+        - name: cycleId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: userId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: action
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Audit log entries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedAuditLog"
+
+  /reports/sector-breakdown:
+    get:
+      operationId: getSectorBreakdown
+      tags: [reports]
+      summary: Get full sector allocation breakdown report
+      parameters:
+        - name: cycleId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Sector breakdown report
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SectorBreakdownItem"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +720,686 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required:
+        - error
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+
+    LoginBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/UserWithSector"
+        token:
+          type: string
+      required:
+        - user
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [super_admin, ceo, ministry_head, department_head, viewer]
+        sectorId:
+          type: integer
+          nullable: true
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - email
+        - role
+        - isActive
+        - createdAt
+
+    UserWithSector:
+      allOf:
+        - $ref: "#/components/schemas/User"
+        - type: object
+          properties:
+            sector:
+              $ref: "#/components/schemas/Sector"
+              nullable: true
+
+    CreateUserBody:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        role:
+          type: string
+          enum: [super_admin, ceo, ministry_head, department_head, viewer]
+        sectorId:
+          type: integer
+          nullable: true
+      required:
+        - name
+        - email
+        - password
+        - role
+
+    UpdateUserBody:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [super_admin, ceo, ministry_head, department_head, viewer]
+        sectorId:
+          type: integer
+          nullable: true
+        isActive:
+          type: boolean
+        password:
+          type: string
+
+    Sector:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        code:
+          type: string
+        parentId:
+          type: integer
+          nullable: true
+        depth:
+          type: integer
+        responsibleUserId:
+          type: integer
+          nullable: true
+        isActive:
+          type: boolean
+        sortOrder:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - code
+        - depth
+        - isActive
+        - sortOrder
+        - createdAt
+
+    SectorWithStats:
+      allOf:
+        - $ref: "#/components/schemas/Sector"
+        - type: object
+          properties:
+            responsibleUser:
+              $ref: "#/components/schemas/User"
+              nullable: true
+            parent:
+              $ref: "#/components/schemas/Sector"
+              nullable: true
+            totalAllocated:
+              type: number
+            totalRevoked:
+              type: number
+            netAllocated:
+              type: number
+            availableBalance:
+              type: number
+            utilizationPct:
+              type: number
+            childCount:
+              type: integer
+
+    SectorTreeNode:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        code:
+          type: string
+        depth:
+          type: integer
+        parentId:
+          type: integer
+          nullable: true
+        totalAllocated:
+          type: number
+        totalRevoked:
+          type: number
+        netAllocated:
+          type: number
+        availableBalance:
+          type: number
+        utilizationPct:
+          type: number
+        responsibleUser:
+          $ref: "#/components/schemas/User"
+          nullable: true
+        children:
+          type: array
+          items:
+            $ref: "#/components/schemas/SectorTreeNode"
+      required:
+        - id
+        - name
+        - code
+        - depth
+        - totalAllocated
+        - totalRevoked
+        - netAllocated
+        - availableBalance
+        - utilizationPct
+        - children
+
+    CreateSectorBody:
+      type: object
+      properties:
+        name:
+          type: string
+        code:
+          type: string
+        parentId:
+          type: integer
+          nullable: true
+        responsibleUserId:
+          type: integer
+          nullable: true
+        sortOrder:
+          type: integer
+      required:
+        - name
+        - code
+
+    UpdateSectorBody:
+      type: object
+      properties:
+        name:
+          type: string
+        code:
+          type: string
+        parentId:
+          type: integer
+          nullable: true
+        responsibleUserId:
+          type: integer
+          nullable: true
+        isActive:
+          type: boolean
+        sortOrder:
+          type: integer
+
+    BudgetCycle:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        totalBudget:
+          type: number
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        isActive:
+          type: boolean
+        createdBy:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        totalAllocated:
+          type: number
+        totalRevoked:
+          type: number
+        availableBalance:
+          type: number
+        utilizationPct:
+          type: number
+      required:
+        - id
+        - name
+        - totalBudget
+        - startDate
+        - endDate
+        - isActive
+        - createdBy
+        - createdAt
+
+    CreateCycleBody:
+      type: object
+      properties:
+        name:
+          type: string
+        totalBudget:
+          type: number
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        isActive:
+          type: boolean
+      required:
+        - name
+        - totalBudget
+        - startDate
+        - endDate
+
+    UpdateCycleBody:
+      type: object
+      properties:
+        name:
+          type: string
+        totalBudget:
+          type: number
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        isActive:
+          type: boolean
+
+    Allocation:
+      type: object
+      properties:
+        id:
+          type: integer
+        budgetCycleId:
+          type: integer
+        fromSectorId:
+          type: integer
+          nullable: true
+        toSectorId:
+          type: integer
+        allocatedBy:
+          type: integer
+        amount:
+          type: number
+        comment:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending, active, revoked, exhausted]
+        allocatedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - budgetCycleId
+        - toSectorId
+        - allocatedBy
+        - amount
+        - status
+        - allocatedAt
+        - createdAt
+
+    AllocationWithDetails:
+      allOf:
+        - $ref: "#/components/schemas/Allocation"
+        - type: object
+          properties:
+            fromSector:
+              $ref: "#/components/schemas/Sector"
+              nullable: true
+            toSector:
+              $ref: "#/components/schemas/Sector"
+            allocatedByUser:
+              $ref: "#/components/schemas/User"
+            revocation:
+              $ref: "#/components/schemas/Revocation"
+              nullable: true
+
+    CreateAllocationBody:
+      type: object
+      properties:
+        budgetCycleId:
+          type: integer
+        fromSectorId:
+          type: integer
+          nullable: true
+        toSectorId:
+          type: integer
+        amount:
+          type: number
+        comment:
+          type: string
+      required:
+        - budgetCycleId
+        - toSectorId
+        - amount
+
+    RevokeAllocationBody:
+      type: object
+      properties:
+        reason:
+          type: string
+      required:
+        - reason
+
+    Revocation:
+      type: object
+      properties:
+        id:
+          type: integer
+        allocationId:
+          type: integer
+        revokedBy:
+          type: integer
+        reason:
+          type: string
+        revokedAt:
+          type: string
+          format: date-time
+        revokedByUser:
+          $ref: "#/components/schemas/User"
+      required:
+        - id
+        - allocationId
+        - revokedBy
+        - reason
+        - revokedAt
+
+    DashboardSummary:
+      type: object
+      properties:
+        role:
+          type: string
+        cycle:
+          $ref: "#/components/schemas/BudgetCycle"
+          nullable: true
+        totalBudget:
+          type: number
+        totalAllocated:
+          type: number
+        totalRevoked:
+          type: number
+        availableBalance:
+          type: number
+        utilizationPct:
+          type: number
+        sectorCount:
+          type: integer
+        activeAllocations:
+          type: integer
+        topSectors:
+          type: array
+          items:
+            $ref: "#/components/schemas/SectorWithStats"
+        myAllocated:
+          type: number
+          nullable: true
+        myDistributed:
+          type: number
+          nullable: true
+        myAvailable:
+          type: number
+          nullable: true
+      required:
+        - role
+        - totalBudget
+        - totalAllocated
+        - totalRevoked
+        - availableBalance
+        - utilizationPct
+        - sectorCount
+        - activeAllocations
+        - topSectors
+
+    UtilizationChartItem:
+      type: object
+      properties:
+        sectorId:
+          type: integer
+        sectorName:
+          type: string
+        allocated:
+          type: number
+        revoked:
+          type: number
+        netAllocated:
+          type: number
+        available:
+          type: number
+        utilizationPct:
+          type: number
+      required:
+        - sectorId
+        - sectorName
+        - allocated
+        - revoked
+        - netAllocated
+        - available
+        - utilizationPct
+
+    TimelineDataPoint:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        totalAllocated:
+          type: number
+        totalRevoked:
+          type: number
+        cumulativeAllocated:
+          type: number
+        allocationCount:
+          type: integer
+      required:
+        - date
+        - totalAllocated
+        - totalRevoked
+        - cumulativeAllocated
+        - allocationCount
+
+    ActivityItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        action:
+          type: string
+        description:
+          type: string
+        userId:
+          type: integer
+        userName:
+          type: string
+        amount:
+          type: number
+          nullable: true
+        sectorName:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - action
+        - description
+        - userId
+        - userName
+        - createdAt
+
+    BalanceBreakdown:
+      type: object
+      properties:
+        totalBudget:
+          type: number
+        totalAllocated:
+          type: number
+        totalRevoked:
+          type: number
+        netAllocated:
+          type: number
+        availableBalance:
+          type: number
+        utilizationPct:
+          type: number
+        pendingCount:
+          type: integer
+        activeCount:
+          type: integer
+        revokedCount:
+          type: integer
+      required:
+        - totalBudget
+        - totalAllocated
+        - totalRevoked
+        - netAllocated
+        - availableBalance
+        - utilizationPct
+        - pendingCount
+        - activeCount
+        - revokedCount
+
+    AuditLogEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        userName:
+          type: string
+        action:
+          type: string
+        subjectType:
+          type: string
+        subjectId:
+          type: integer
+          nullable: true
+        meta:
+          type: object
+          nullable: true
+        ipAddress:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - userName
+        - action
+        - subjectType
+        - createdAt
+
+    PaginatedAuditLog:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditLogEntry"
+        total:
+          type: integer
+        offset:
+          type: integer
+        limit:
+          type: integer
+      required:
+        - items
+        - total
+        - offset
+        - limit
+
+    SectorBreakdownItem:
+      type: object
+      properties:
+        sectorId:
+          type: integer
+        sectorName:
+          type: string
+        sectorCode:
+          type: string
+        depth:
+          type: integer
+        parentName:
+          type: string
+          nullable: true
+        responsibleUser:
+          type: string
+          nullable: true
+        totalAllocated:
+          type: number
+        totalRevoked:
+          type: number
+        netAllocated:
+          type: number
+        availableBalance:
+          type: number
+        utilizationPct:
+          type: number
+        allocationCount:
+          type: integer
+      required:
+        - sectorId
+        - sectorName
+        - sectorCode
+        - depth
+        - totalAllocated
+        - totalRevoked
+        - netAllocated
+        - availableBalance
+        - utilizationPct
+        - allocationCount
