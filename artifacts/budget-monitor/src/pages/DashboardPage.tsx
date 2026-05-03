@@ -56,20 +56,36 @@ export default function DashboardPage() {
   }
 
   /* ── derived data ── */
+  const utilizationPct = summary?.utilizationPct ?? 0;
+
+  // Pie: only include slices with positive value so Recharts renders correctly
   const balancePieData = balanceData
-    ? [
-        { name: 'Allocated', value: balanceData.totalAllocated, color: '#3b82f6' },
-        { name: 'Available', value: balanceData.availableBalance, color: '#10b981' },
-        { name: 'Revoked',   value: balanceData.totalRevoked,    color: '#ef4444' },
-      ]
+    ? (() => {
+        const totalBudget = balanceData.totalBudget;
+        const allocated  = Math.min(balanceData.totalAllocated, totalBudget);   // cap at 100%
+        const revoked    = Math.max(0, balanceData.totalRevoked);
+        const available  = Math.max(0, totalBudget - allocated);
+        const items = [
+          { name: 'Allocated', value: allocated,  color: '#3b82f6' },
+          { name: 'Available', value: available,  color: '#10b981' },
+          { name: 'Revoked',   value: revoked,    color: '#ef4444' },
+        ].filter((d) => d.value > 0);
+        return items.length > 0
+          ? items
+          : [{ name: 'No Data', value: 1, color: 'rgba(255,255,255,0.06)' }];
+      })()
     : [];
+
+  // Bar chart: clamp available to 0 so negative bars don't hide/shrink the chart
+  const utilBarData = (utilizationData ?? []).map((d) => ({
+    ...d,
+    available: Math.max(0, d.available),
+  }));
 
   const radarData = (utilizationData ?? []).slice(0, 7).map((d) => ({
     sector: d.sectorName.replace('Ministry of ', '').replace('Department of ', ''),
     utilization: Math.round(d.utilizationPct),
   }));
-
-  const utilizationPct = summary?.utilizationPct ?? 0;
 
   /* ── activity type → badge color ── */
   const activityBadge = (action: string) => {
@@ -131,10 +147,10 @@ export default function DashboardPage() {
 
       {/* ── Row 1: Bar chart + Donut ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <GlassCard header={<SectionHeader title="Sector Utilization" sub="click bar to explore sector" />} className="lg:col-span-2 min-h-[420px]">
+        <GlassCard header={<SectionHeader title="Sector Utilization" sub="click a bar to explore" />} className="lg:col-span-2 min-h-[420px]">
           <ResponsiveContainer width="100%" height={350}>
             <BarChart
-              data={utilizationData ?? []}
+              data={utilBarData}
               onClick={(d) => {
                 const item = d?.activePayload?.[0]?.payload;
                 if (item?.sectorId) navigate(`/sectors/${item.sectorId}`);
@@ -147,44 +163,34 @@ export default function DashboardPage() {
                 fontSize={11}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(v: string) => v.replace('Ministry of ', '').replace('Department of ', '').slice(0, 10)}
+                tickFormatter={(v: string) => v.replace('Ministry of ', '').replace('Department of ', '').slice(0, 12)}
               />
               <YAxis
                 stroke="rgba(255,255,255,0.35)"
                 fontSize={11}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(v) => `${(v / 1e6).toFixed(0)}M`}
+                tickFormatter={(v: number) => {
+                  if (v >= 1e9) return `${(v / 1e9).toFixed(1)}B`;
+                  if (v >= 1e6) return `${(v / 1e6).toFixed(0)}M`;
+                  if (v >= 1e3) return `${(v / 1e3).toFixed(0)}K`;
+                  return `${v}`;
+                }}
               />
               <Tooltip
                 {...TOOLTIP_STYLE}
                 formatter={(v: number, name: string) => [formatCurrency(v), name]}
               />
-              <Legend
-                wrapperStyle={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', paddingTop: 12 }}
-              />
-              <Bar
-                dataKey="allocated"
-                name="Allocated"
-                fill="#3b82f6"
-                radius={[5, 5, 0, 0]}
-                cursor="pointer"
-                maxBarSize={40}
-              >
-                {(utilizationData ?? []).map((entry, i) => (
+              <Legend wrapperStyle={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', paddingTop: 12 }} />
+              <Bar dataKey="allocated" name="Allocated" radius={[5, 5, 0, 0]} cursor="pointer" maxBarSize={40}>
+                {utilBarData.map((entry, i) => (
                   <Cell
                     key={i}
-                    fill={
-                      entry.utilizationPct >= 90
-                        ? '#ef4444'
-                        : entry.utilizationPct >= 70
-                        ? '#f59e0b'
-                        : '#3b82f6'
-                    }
+                    fill={entry.utilizationPct >= 90 ? '#ef4444' : entry.utilizationPct >= 70 ? '#f59e0b' : '#3b82f6'}
                   />
                 ))}
               </Bar>
-              <Bar dataKey="available" name="Available" fill="rgba(16,185,129,0.25)" radius={[5, 5, 0, 0]} maxBarSize={40} />
+              <Bar dataKey="available" name="Available" fill="rgba(16,185,129,0.3)" radius={[5, 5, 0, 0]} maxBarSize={40} />
             </BarChart>
           </ResponsiveContainer>
         </GlassCard>
@@ -218,14 +224,21 @@ export default function DashboardPage() {
             <span className="text-[10px] uppercase tracking-widest text-white/30">utilized</span>
           </div>
 
+          {/* Legend rows — always use raw balanceData so values are accurate */}
           <div className="space-y-3 mt-2">
-            {balancePieData.map((item) => (
+            {balanceData && [
+              { name: 'Allocated', value: balanceData.totalAllocated,  color: '#3b82f6' },
+              { name: 'Available', value: balanceData.availableBalance, color: '#10b981' },
+              { name: 'Revoked',   value: balanceData.totalRevoked,     color: '#ef4444' },
+            ].map((item) => (
               <div key={item.name} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
                   <span className="text-xs text-white/60">{item.name}</span>
                 </div>
-                <span className="text-xs font-bold text-white">{formatCurrency(item.value)}</span>
+                <span className={`text-xs font-bold ${item.value < 0 ? 'text-rose-400' : 'text-white'}`}>
+                  {formatCurrency(item.value)}
+                </span>
               </div>
             ))}
           </div>
