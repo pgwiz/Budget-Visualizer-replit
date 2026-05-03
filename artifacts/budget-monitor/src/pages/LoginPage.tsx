@@ -8,7 +8,7 @@ import { useLocation } from 'wouter';
 import {
   Mail, Lock, Eye, EyeOff, Shield, BarChart3, GitBranch,
   Users, AlertTriangle, ChevronRight, Building2, School,
-  BookOpen, Zap, LogIn,
+  BookOpen, Zap, LogIn, Landmark,
 } from 'lucide-react';
 import { queryClient } from '@/lib/api';
 import { getGetMeQueryKey } from '@workspace/api-client-react';
@@ -27,169 +27,142 @@ interface OrgUser {
 interface OrgNode {
   id: string;
   label: string;
-  icon: 'authority' | 'institution' | 'school' | 'department';
+  icon: 'ministry' | 'authority' | 'institution' | 'school' | 'department';
   user?: OrgUser;
   children?: OrgNode[];
 }
 
 const ROLE_META: Record<Role, { label: string; color: string; bg: string }> = {
-  super_admin:     { label: 'Sys Admin',    color: '#f87171', bg: 'rgba(248,113,113,0.12)' },
-  ceo:             { label: 'Director Gen', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)'  },
-  ministry_head:   { label: 'Principal',    color: '#60a5fa', bg: 'rgba(96,165,250,0.12)'  },
-  department_head: { label: 'HOD',          color: '#34d399', bg: 'rgba(52,211,153,0.12)'  },
-  viewer:          { label: 'Auditor',      color: '#a78bfa', bg: 'rgba(167,139,250,0.12)' },
+  super_admin:     { label: 'Sys Admin',  color: '#f87171', bg: 'rgba(248,113,113,0.12)' },
+  ceo:             { label: 'CEO / DG',   color: '#fbbf24', bg: 'rgba(251,191,36,0.12)'  },
+  ministry_head:   { label: 'Principal',  color: '#60a5fa', bg: 'rgba(96,165,250,0.12)'  },
+  department_head: { label: 'HOD',        color: '#34d399', bg: 'rgba(52,211,153,0.12)'  },
+  viewer:          { label: 'Auditor',    color: '#a78bfa', bg: 'rgba(167,139,250,0.12)' },
 };
 
 const ORG_TREE: OrgNode[] = [
   {
-    id: 'tvet-authority',
-    label: 'TVET Authority',
-    icon: 'authority',
+    id: 'moe',
+    label: 'Ministry of Education',
+    icon: 'ministry',
     children: [
       {
-        id: 'admin',
-        label: 'System Administrator',
+        id: 'cs-moe',
+        label: 'Cabinet Secretary, Ministry of Education',
+        icon: 'ministry',
+        user: { name: 'Cabinet Secretary, Ministry of Education', email: 'ceo@budget.go.ke', role: 'ceo', initials: 'CS' },
+      },
+      {
+        id: 'tvet-authority',
+        label: 'TVET Authority',
         icon: 'authority',
-        user: { name: 'System Administrator', email: 'admin@tvetauthority.go.ke', role: 'super_admin', initials: 'SA' },
-      },
-      {
-        id: 'dg',
-        label: 'Dr. James Kiprotich Mutai',
-        icon: 'authority',
-        user: { name: 'Dr. James Kiprotich Mutai', email: 'dg@tvetauthority.go.ke', role: 'ceo', initials: 'JM' },
-      },
-      {
-        id: 'auditor',
-        label: 'Mr. Joseph Mwangi Gicheru',
-        icon: 'authority',
-        user: { name: 'Mr. Joseph Mwangi Gicheru', email: 'auditor@tvetauthority.go.ke', role: 'viewer', initials: 'JG' },
-      },
-    ],
-  },
-  {
-    id: 'tonp',
-    label: 'The Ollessos National Polytechnic',
-    icon: 'institution',
-    children: [
-      {
-        id: 'tonp-principal',
-        label: 'Dr. Grace Wanjiku Njoroge',
-        icon: 'institution',
-        user: { name: 'Dr. Grace Wanjiku Njoroge', email: 'principal@tonp.ac.ke', role: 'ministry_head', initials: 'GN' },
-      },
-      {
-        id: 'tonp-eng',
-        label: 'School of Engineering & Technology',
-        icon: 'school',
         children: [
           {
-            id: 'hod-eng-tonp',
-            label: 'Eng. Peter Kamau Njeru',
-            icon: 'department',
-            user: { name: 'Eng. Peter Kamau Njeru', email: 'hod.engineering@tonp.ac.ke', role: 'department_head', initials: 'PN' },
+            id: 'admin',
+            label: 'System Administrator',
+            icon: 'authority',
+            user: { name: 'System Administrator', email: 'admin@tvetauthority.go.ke', role: 'super_admin', initials: 'SA' },
           },
-        ],
-      },
-      {
-        id: 'tonp-bus',
-        label: 'School of Business & Management',
-        icon: 'school',
-        children: [
           {
-            id: 'hod-bus-tonp',
-            label: 'Ms. Faith Akinyi Odhiambo',
-            icon: 'department',
-            user: { name: 'Ms. Faith Akinyi Odhiambo', email: 'hod.business@tonp.ac.ke', role: 'department_head', initials: 'FO' },
+            id: 'dg',
+            label: 'Dr. James Kiprotich Mutai',
+            icon: 'authority',
+            user: { name: 'Dr. James Kiprotich Mutai', email: 'dg@tvetauthority.go.ke', role: 'ceo', initials: 'JM' },
           },
-        ],
-      },
-      {
-        id: 'tonp-ict',
-        label: 'School of ICT & Computing',
-        icon: 'school',
-        children: [
           {
-            id: 'hod-ict-tonp',
-            label: 'Mr. Brian Kipchoge Rono',
-            icon: 'department',
-            user: { name: 'Mr. Brian Kipchoge Rono', email: 'hod.ict@tonp.ac.ke', role: 'department_head', initials: 'BR' },
+            id: 'auditor',
+            label: 'Mr. Joseph Mwangi Gicheru',
+            icon: 'authority',
+            user: { name: 'Mr. Joseph Mwangi Gicheru', email: 'auditor@tvetauthority.go.ke', role: 'viewer', initials: 'JG' },
           },
-        ],
-      },
-      {
-        id: 'tonp-sci',
-        label: 'School of Applied Sciences & Health',
-        icon: 'school',
-        children: [
           {
-            id: 'hod-sci-tonp',
-            label: 'Dr. Lydia Muthoni Kariuki',
-            icon: 'department',
-            user: { name: 'Dr. Lydia Muthoni Kariuki', email: 'hod.sciences@tonp.ac.ke', role: 'department_head', initials: 'LK' },
+            id: 'tonp',
+            label: 'The Ollessos National Polytechnic',
+            icon: 'institution',
+            children: [
+              {
+                id: 'tonp-principal',
+                label: 'Dr. Grace Wanjiku Njoroge',
+                icon: 'institution',
+                user: { name: 'Dr. Grace Wanjiku Njoroge', email: 'principal@tonp.ac.ke', role: 'ministry_head', initials: 'GN' },
+              },
+              {
+                id: 'tonp-eng',
+                label: 'School of Engineering & Technology',
+                icon: 'school',
+                children: [
+                  { id: 'hod-eng-tonp', label: 'Eng. Peter Kamau Njeru', icon: 'department', user: { name: 'Eng. Peter Kamau Njeru', email: 'hod.engineering@tonp.ac.ke', role: 'department_head', initials: 'PN' } },
+                ],
+              },
+              {
+                id: 'tonp-bus',
+                label: 'School of Business & Management',
+                icon: 'school',
+                children: [
+                  { id: 'hod-bus-tonp', label: 'Ms. Faith Akinyi Odhiambo', icon: 'department', user: { name: 'Ms. Faith Akinyi Odhiambo', email: 'hod.business@tonp.ac.ke', role: 'department_head', initials: 'FO' } },
+                ],
+              },
+              {
+                id: 'tonp-ict',
+                label: 'School of ICT & Computing',
+                icon: 'school',
+                children: [
+                  { id: 'hod-ict-tonp', label: 'Mr. Brian Kipchoge Rono', icon: 'department', user: { name: 'Mr. Brian Kipchoge Rono', email: 'hod.ict@tonp.ac.ke', role: 'department_head', initials: 'BR' } },
+                ],
+              },
+              {
+                id: 'tonp-sci',
+                label: 'School of Applied Sciences & Health',
+                icon: 'school',
+                children: [
+                  { id: 'hod-sci-tonp', label: 'Dr. Lydia Muthoni Kariuki', icon: 'department', user: { name: 'Dr. Lydia Muthoni Kariuki', email: 'hod.sciences@tonp.ac.ke', role: 'department_head', initials: 'LK' } },
+                ],
+              },
+            ],
           },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'kibt',
-    label: 'Kenya Institute of Business Training',
-    icon: 'institution',
-    children: [
-      {
-        id: 'kibt-principal',
-        label: 'Mr. Samuel Omondi Otieno',
-        icon: 'institution',
-        user: { name: 'Mr. Samuel Omondi Otieno', email: 'principal@kibt.ac.ke', role: 'ministry_head', initials: 'SO' },
-      },
-      {
-        id: 'kibt-bus',
-        label: 'School of Business Studies',
-        icon: 'school',
-        children: [
           {
-            id: 'hod-bus-kibt',
-            label: 'Ms. Alice Chepkemoi Koech',
-            icon: 'department',
-            user: { name: 'Ms. Alice Chepkemoi Koech', email: 'hod.engineering@kibt.ac.ke', role: 'department_head', initials: 'AK' },
+            id: 'kibt',
+            label: 'Kenya Institute of Business Training',
+            icon: 'institution',
+            children: [
+              {
+                id: 'kibt-principal',
+                label: 'Mr. Samuel Omondi Otieno',
+                icon: 'institution',
+                user: { name: 'Mr. Samuel Omondi Otieno', email: 'principal@kibt.ac.ke', role: 'ministry_head', initials: 'SO' },
+              },
+              {
+                id: 'kibt-bus',
+                label: 'School of Business Studies',
+                icon: 'school',
+                children: [
+                  { id: 'hod-bus-kibt', label: 'Ms. Alice Chepkemoi Koech', icon: 'department', user: { name: 'Ms. Alice Chepkemoi Koech', email: 'hod.engineering@kibt.ac.ke', role: 'department_head', initials: 'AK' } },
+                ],
+              },
+              { id: 'kibt-sec', label: 'School of Secretarial & Office Mgmt', icon: 'school', children: [] },
+            ],
           },
-        ],
-      },
-      {
-        id: 'kibt-sec',
-        label: 'School of Secretarial & Office Mgmt',
-        icon: 'school',
-        children: [],
-      },
-    ],
-  },
-  {
-    id: 'rvist',
-    label: 'Rift Valley Institute of Science & Technology',
-    icon: 'institution',
-    children: [
-      {
-        id: 'rvist-principal',
-        label: 'Mrs. Beatrice Cherop Sang',
-        icon: 'institution',
-        user: { name: 'Mrs. Beatrice Cherop Sang', email: 'principal@rvist.ac.ke', role: 'ministry_head', initials: 'BS' },
-      },
-      {
-        id: 'rvist-eng',
-        label: 'School of Engineering',
-        icon: 'school',
-        children: [],
-      },
-      {
-        id: 'rvist-com',
-        label: 'School of Commerce & Business',
-        icon: 'school',
-        children: [
           {
-            id: 'hod-com-rvist',
-            label: 'Mr. Dennis Otieno Ochieng',
-            icon: 'department',
-            user: { name: 'Mr. Dennis Otieno Ochieng', email: 'hod.commerce@rvist.ac.ke', role: 'department_head', initials: 'DO' },
+            id: 'rvist',
+            label: 'Rift Valley Institute of Science & Technology',
+            icon: 'institution',
+            children: [
+              {
+                id: 'rvist-principal',
+                label: 'Mrs. Beatrice Cherop Sang',
+                icon: 'institution',
+                user: { name: 'Mrs. Beatrice Cherop Sang', email: 'principal@rvist.ac.ke', role: 'ministry_head', initials: 'BS' },
+              },
+              { id: 'rvist-eng', label: 'School of Engineering', icon: 'school', children: [] },
+              {
+                id: 'rvist-com',
+                label: 'School of Commerce & Business',
+                icon: 'school',
+                children: [
+                  { id: 'hod-com-rvist', label: 'Mr. Dennis Otieno Ochieng', icon: 'department', user: { name: 'Mr. Dennis Otieno Ochieng', email: 'hod.commerce@rvist.ac.ke', role: 'department_head', initials: 'DO' } },
+                ],
+              },
+            ],
           },
         ],
       },
@@ -198,6 +171,7 @@ const ORG_TREE: OrgNode[] = [
 ];
 
 const NODE_ICONS: Record<OrgNode['icon'], typeof Building2> = {
+  ministry:    Landmark,
   authority:   Shield,
   institution: Building2,
   school:      School,
@@ -516,35 +490,44 @@ export default function LoginPage() {
                   className="p-5"
                 >
                   {/* Institution summary chips */}
-                  <div className="flex flex-col gap-1 mb-3">
-                    {ORG_TREE.map((node, i) => {
-                      const Icon = NODE_ICONS[node.icon];
-                      const isAuthority = node.icon === 'authority';
-                      return (
-                        <div
-                          key={node.id}
-                          className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg"
-                          style={{
-                            background: isAuthority ? 'rgba(99,102,241,0.08)' : 'rgba(59,130,246,0.06)',
-                            border: `1px solid ${isAuthority ? 'rgba(99,102,241,0.18)' : 'rgba(59,130,246,0.12)'}`,
-                          }}
-                        >
-                          <div
-                            className="w-5 h-5 rounded-md shrink-0 flex items-center justify-center"
-                            style={{ background: isAuthority ? 'rgba(99,102,241,0.2)' : 'rgba(59,130,246,0.15)' }}
-                          >
-                            <Icon size={11} style={{ color: isAuthority ? '#818cf8' : '#60a5fa' }} />
-                          </div>
-                          <span className="text-white/60 text-[11px] font-semibold truncate">{node.label}</span>
-                          {node.children && (
-                            <span className="ml-auto shrink-0 text-[9px] text-white/20 font-mono">
-                              {node.children.filter(c => c.user).length + node.children.flatMap(c => c.children ?? []).filter(c => c.user).length} accounts
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                  {(() => {
+                    const CHIPS: { label: string; icon: OrgNode['icon']; accounts: number; indent?: boolean }[] = [
+                      { label: 'Ministry of Education',                       icon: 'ministry',     accounts: 1 },
+                      { label: 'TVET Authority',                              icon: 'authority',    accounts: 3, indent: true },
+                      { label: 'The Ollessos National Polytechnic',           icon: 'institution',  accounts: 5, indent: true },
+                      { label: 'Kenya Institute of Business Training',        icon: 'institution',  accounts: 2, indent: true },
+                      { label: 'Rift Valley Institute of Science & Technology', icon: 'institution', accounts: 2, indent: true },
+                    ];
+                    const ICON_STYLE: Record<OrgNode['icon'], { bg: string; color: string; rowBg: string; rowBorder: string }> = {
+                      ministry:    { bg: 'rgba(139,92,246,0.2)',  color: '#a78bfa', rowBg: 'rgba(139,92,246,0.06)', rowBorder: 'rgba(139,92,246,0.18)' },
+                      authority:   { bg: 'rgba(99,102,241,0.2)', color: '#818cf8', rowBg: 'rgba(99,102,241,0.06)', rowBorder: 'rgba(99,102,241,0.14)' },
+                      institution: { bg: 'rgba(59,130,246,0.15)', color: '#60a5fa', rowBg: 'rgba(59,130,246,0.05)', rowBorder: 'rgba(59,130,246,0.12)' },
+                      school:      { bg: 'rgba(52,211,153,0.15)', color: '#34d399', rowBg: 'rgba(52,211,153,0.05)', rowBorder: 'rgba(52,211,153,0.12)' },
+                      department:  { bg: 'rgba(148,163,184,0.1)', color: '#94a3b8', rowBg: 'rgba(148,163,184,0.04)', rowBorder: 'rgba(148,163,184,0.1)' },
+                    };
+                    return (
+                      <div className="flex flex-col gap-1 mb-3">
+                        {CHIPS.map(chip => {
+                          const Icon = NODE_ICONS[chip.icon];
+                          const s = ICON_STYLE[chip.icon];
+                          return (
+                            <div
+                              key={chip.label}
+                              className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg"
+                              style={{ marginLeft: chip.indent ? 12 : 0, background: s.rowBg, border: `1px solid ${s.rowBorder}` }}
+                            >
+                              {chip.indent && <div className="w-px h-3 bg-white/10 shrink-0" />}
+                              <div className="w-5 h-5 rounded-md shrink-0 flex items-center justify-center" style={{ background: s.bg }}>
+                                <Icon size={11} style={{ color: s.color }} />
+                              </div>
+                              <span className="text-white/60 text-[11px] font-semibold truncate">{chip.label}</span>
+                              <span className="ml-auto shrink-0 text-[9px] text-white/20 font-mono">{chip.accounts} accounts</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
 
                   <p className="text-white/30 text-[11px] mb-4 text-center">
                     Browse the institution hierarchy and click any account to sign in instantly.
