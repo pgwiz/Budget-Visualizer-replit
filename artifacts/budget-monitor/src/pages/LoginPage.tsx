@@ -515,6 +515,37 @@ export default function LoginPage() {
                   transition={{ duration: 0.22 }}
                   className="p-5"
                 >
+                  {/* Institution summary chips */}
+                  <div className="flex flex-col gap-1 mb-3">
+                    {ORG_TREE.map((node, i) => {
+                      const Icon = NODE_ICONS[node.icon];
+                      const isAuthority = node.icon === 'authority';
+                      return (
+                        <div
+                          key={node.id}
+                          className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg"
+                          style={{
+                            background: isAuthority ? 'rgba(99,102,241,0.08)' : 'rgba(59,130,246,0.06)',
+                            border: `1px solid ${isAuthority ? 'rgba(99,102,241,0.18)' : 'rgba(59,130,246,0.12)'}`,
+                          }}
+                        >
+                          <div
+                            className="w-5 h-5 rounded-md shrink-0 flex items-center justify-center"
+                            style={{ background: isAuthority ? 'rgba(99,102,241,0.2)' : 'rgba(59,130,246,0.15)' }}
+                          >
+                            <Icon size={11} style={{ color: isAuthority ? '#818cf8' : '#60a5fa' }} />
+                          </div>
+                          <span className="text-white/60 text-[11px] font-semibold truncate">{node.label}</span>
+                          {node.children && (
+                            <span className="ml-auto shrink-0 text-[9px] text-white/20 font-mono">
+                              {node.children.filter(c => c.user).length + node.children.flatMap(c => c.children ?? []).filter(c => c.user).length} accounts
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
                   <p className="text-white/30 text-[11px] mb-4 text-center">
                     Browse the institution hierarchy and click any account to sign in instantly.
                   </p>
