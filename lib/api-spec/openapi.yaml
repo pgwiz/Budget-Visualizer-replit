@@ -26,6 +26,10 @@ tags:
     description: Dashboard summaries
   - name: reports
     description: Reports and audit logs
+  - name: products
+    description: Procurement product catalog
+  - name: procurement
+    description: Purchase orders and expenditure tracking
 
 paths:
   /healthz:
@@ -646,6 +650,257 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BalanceBreakdown"
+
+  # PRODUCTS
+  /products:
+    get:
+      operationId: listProducts
+      tags: [products]
+      summary: List all products in the catalog
+      parameters:
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: activeOnly
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+
+    post:
+      operationId: createProduct
+      tags: [products]
+      summary: Create a product (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductBody"
+      responses:
+        "201":
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+
+  /products/{productId}:
+    put:
+      operationId: updateProduct
+      tags: [products]
+      summary: Update a product (admin only)
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductBody"
+      responses:
+        "200":
+          description: Product updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+
+    delete:
+      operationId: deleteProduct
+      tags: [products]
+      summary: Delete a product (admin only)
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Product deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  # PURCHASE ORDERS
+  /purchase-orders:
+    get:
+      operationId: listPurchaseOrders
+      tags: [procurement]
+      summary: List purchase orders (scoped to user role/sector)
+      parameters:
+        - name: sectorId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [draft, submitted, approved, rejected]
+        - name: cycleId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of purchase orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PurchaseOrderWithDetails"
+
+    post:
+      operationId: createPurchaseOrder
+      tags: [procurement]
+      summary: Create a new draft purchase order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePurchaseOrderBody"
+      responses:
+        "201":
+          description: Purchase order created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PurchaseOrderWithDetails"
+
+  /purchase-orders/{orderId}:
+    get:
+      operationId: getPurchaseOrder
+      tags: [procurement]
+      summary: Get a purchase order with its line items
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Purchase order with items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PurchaseOrderWithDetails"
+
+  /purchase-orders/{orderId}/submit:
+    post:
+      operationId: submitPurchaseOrder
+      tags: [procurement]
+      summary: Submit a draft order for approval
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Order submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PurchaseOrderWithDetails"
+
+  /purchase-orders/{orderId}/review:
+    post:
+      operationId: reviewPurchaseOrder
+      tags: [procurement]
+      summary: Approve or reject a submitted purchase order
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewOrderBody"
+      responses:
+        "200":
+          description: Order reviewed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PurchaseOrderWithDetails"
+
+  /purchase-orders/{orderId}/items:
+    post:
+      operationId: addOrderItem
+      tags: [procurement]
+      summary: Add a line item to a draft purchase order
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddOrderItemBody"
+      responses:
+        "201":
+          description: Item added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PurchaseOrderWithDetails"
+
+  /purchase-orders/{orderId}/items/{itemId}:
+    delete:
+      operationId: removeOrderItem
+      tags: [procurement]
+      summary: Remove a line item from a draft order
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Item removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PurchaseOrderWithDetails"
 
   # REPORTS
   /reports/audit-log:
@@ -1362,6 +1617,188 @@ components:
         - total
         - offset
         - limit
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        category:
+          type: string
+        unit:
+          type: string
+        unitPrice:
+          type: number
+        description:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+        sortOrder:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - category
+        - unit
+        - unitPrice
+        - isActive
+        - sortOrder
+        - createdAt
+
+    CreateProductBody:
+      type: object
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+        unit:
+          type: string
+        unitPrice:
+          type: number
+        description:
+          type: string
+        isActive:
+          type: boolean
+        sortOrder:
+          type: integer
+      required:
+        - name
+        - category
+        - unit
+        - unitPrice
+
+    PurchaseOrderItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        orderId:
+          type: integer
+        productId:
+          type: integer
+        product:
+          $ref: "#/components/schemas/Product"
+        quantity:
+          type: number
+        unitPriceSnapshot:
+          type: number
+        lineTotal:
+          type: number
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - orderId
+        - productId
+        - quantity
+        - unitPriceSnapshot
+        - lineTotal
+        - createdAt
+
+    PurchaseOrderWithDetails:
+      type: object
+      properties:
+        id:
+          type: integer
+        sectorId:
+          type: integer
+        sector:
+          $ref: "#/components/schemas/Sector"
+        budgetCycleId:
+          type: integer
+        createdBy:
+          type: integer
+        createdByUser:
+          $ref: "#/components/schemas/User"
+        status:
+          type: string
+          enum: [draft, submitted, approved, rejected]
+        notes:
+          type: string
+          nullable: true
+        totalAmount:
+          type: number
+        submittedAt:
+          type: string
+          format: date-time
+          nullable: true
+        reviewedAt:
+          type: string
+          format: date-time
+          nullable: true
+        reviewedBy:
+          type: integer
+          nullable: true
+        reviewedByUser:
+          $ref: "#/components/schemas/User"
+          nullable: true
+        rejectionReason:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PurchaseOrderItem"
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - sectorId
+        - budgetCycleId
+        - createdBy
+        - status
+        - totalAmount
+        - items
+        - createdAt
+
+    CreatePurchaseOrderBody:
+      type: object
+      properties:
+        sectorId:
+          type: integer
+        budgetCycleId:
+          type: integer
+        notes:
+          type: string
+      required:
+        - sectorId
+        - budgetCycleId
+
+    AddOrderItemBody:
+      type: object
+      properties:
+        productId:
+          type: integer
+        quantity:
+          type: number
+        notes:
+          type: string
+      required:
+        - productId
+        - quantity
+
+    ReviewOrderBody:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [approve, reject]
+        rejectionReason:
+          type: string
+      required:
+        - action
 
     SectorBreakdownItem:
       type: object

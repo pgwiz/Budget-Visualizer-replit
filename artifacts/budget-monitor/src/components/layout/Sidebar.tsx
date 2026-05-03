@@ -8,6 +8,8 @@ import {
   FileText, 
   LogOut,
   Workflow,
+  ShoppingCart,
+  Package,
 } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { cn } from '@/lib/utils';
@@ -36,7 +38,9 @@ export function Sidebar() {
     { href: '/allocations', label: 'Allocations', icon: ArrowLeftRight, show: true },
     { href: '/cycles', label: 'Cycles', icon: RefreshCw, show: isSuperAdmin },
     { href: '/users', label: 'Users', icon: Users, show: isSuperAdmin || isCeo },
-    { href: '/reports', label: 'Reports', icon: FileText, show: true },
+    { href: '/reports',     label: 'Reports',      icon: FileText,    show: true },
+    { href: '/catalog',     label: 'Catalog',      icon: Package,     show: true },
+    { href: '/procurement', label: 'Procurement',  icon: ShoppingCart, show: true },
   ];
 
   return (

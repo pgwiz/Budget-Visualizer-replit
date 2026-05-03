@@ -11,6 +11,8 @@ import LoginPage from "@/pages/LoginPage";
 import HomePage from "@/pages/HomePage";
 import DashboardPage from "@/pages/DashboardPage";
 import SectorsPage from "@/pages/SectorsPage";
+import CatalogPage from "@/pages/CatalogPage";
+import ProcurementPage from "@/pages/ProcurementPage";
 import SectorDetailPage from "@/pages/SectorDetailPage";
 import AllocationsPage from "@/pages/AllocationsPage";
 import CyclesPage from "@/pages/CyclesPage";
@@ -86,6 +88,12 @@ function Routes() {
       </Route>
       <Route path="/reports">
         <ProtectedRoute component={ReportsPage} />
+      </Route>
+      <Route path="/catalog">
+        <ProtectedRoute component={CatalogPage} />
+      </Route>
+      <Route path="/procurement">
+        <ProtectedRoute component={ProcurementPage} />
       </Route>
       <Route component={NotFound} />
     </Switch>

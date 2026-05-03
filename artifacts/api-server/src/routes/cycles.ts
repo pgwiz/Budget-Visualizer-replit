@@ -48,7 +48,7 @@ router.post("/cycles", requireAuth, requireRole("super_admin"), async (req, res)
 });
 
 router.put("/cycles/:cycleId", requireAuth, requireRole("super_admin"), async (req, res): Promise<void> => {
-  const cycleId = parseInt(req.params.cycleId);
+  const cycleId = parseInt(req.params['cycleId'] as string);
   const { name, totalBudget, startDate, endDate, isActive } = req.body;
   const updates: any = { updatedAt: new Date() };
   if (name != null) updates.name = name;
@@ -62,7 +62,7 @@ router.put("/cycles/:cycleId", requireAuth, requireRole("super_admin"), async (r
 });
 
 router.post("/cycles/:cycleId/activate", requireAuth, requireRole("super_admin"), async (req, res): Promise<void> => {
-  const cycleId = parseInt(req.params.cycleId);
+  const cycleId = parseInt(req.params['cycleId'] as string);
   await db.update(budgetCyclesTable).set({ isActive: false });
   const [activated] = await db.update(budgetCyclesTable).set({ isActive: true }).where(eq(budgetCyclesTable.id, cycleId)).returning();
   if (!activated) { res.status(404).json({ error: "Not Found" }); return; }

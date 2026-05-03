@@ -7,6 +7,8 @@ import cyclesRouter from "./cycles";
 import allocationsRouter from "./allocations";
 import dashboardRouter from "./dashboard";
 import reportsRouter from "./reports";
+import productsRouter from "./products";
+import purchaseOrdersRouter from "./purchase-orders";
 
 const router: IRouter = Router();
 
@@ -18,5 +20,7 @@ router.use(cyclesRouter);
 router.use(allocationsRouter);
 router.use(dashboardRouter);
 router.use(reportsRouter);
+router.use(productsRouter);
+router.use(purchaseOrdersRouter);
 
 export default router;

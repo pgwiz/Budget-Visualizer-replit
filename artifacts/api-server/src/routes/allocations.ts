@@ -69,7 +69,7 @@ router.post("/allocations", requireAuth, async (req, res): Promise<void> => {
 });
 
 router.get("/allocations/:allocationId", requireAuth, async (req, res): Promise<void> => {
-  const allocs = await db.select().from(allocationsTable).where(eq(allocationsTable.id, parseInt(req.params.allocationId))).limit(1);
+  const allocs = await db.select().from(allocationsTable).where(eq(allocationsTable.id, parseInt(req.params['allocationId'] as string))).limit(1);
   if (!allocs[0]) { res.status(404).json({ error: "Not Found" }); return; }
   res.json(await enrichAllocation(allocs[0]));
 });
@@ -80,7 +80,7 @@ router.post("/allocations/:allocationId/revoke", requireAuth, async (req, res): 
   if (!reason || reason.length < 5) {
     res.status(400).json({ error: "Bad Request", message: "Reason must be at least 5 characters" }); return;
   }
-  const allocs = await db.select().from(allocationsTable).where(eq(allocationsTable.id, parseInt(req.params.allocationId))).limit(1);
+  const allocs = await db.select().from(allocationsTable).where(eq(allocationsTable.id, parseInt(req.params['allocationId'] as string))).limit(1);
   if (!allocs[0]) { res.status(404).json({ error: "Not Found" }); return; }
   if (allocs[0].status === "revoked") {
     res.status(400).json({ error: "Bad Request", message: "Allocation is already revoked" }); return;

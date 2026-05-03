@@ -4,3 +4,5 @@ export * from "./budget-cycles";
 export * from "./allocations";
 export * from "./revocations";
 export * from "./audit-logs";
+export * from "./products";
+export * from "./purchase-orders";

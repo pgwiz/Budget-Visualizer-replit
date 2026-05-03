@@ -1086,6 +1086,583 @@ export const GetBalanceBreakdownResponse = zod.object({
 });
 
 /**
+ * @summary List all products in the catalog
+ */
+export const ListProductsQueryParams = zod.object({
+  category: zod.coerce.string().optional(),
+  activeOnly: zod.coerce.boolean().optional(),
+});
+
+export const ListProductsResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  category: zod.string(),
+  unit: zod.string(),
+  unitPrice: zod.number(),
+  description: zod.string().nullish(),
+  isActive: zod.boolean(),
+  sortOrder: zod.number(),
+  createdAt: zod.coerce.date(),
+});
+export const ListProductsResponse = zod.array(ListProductsResponseItem);
+
+/**
+ * @summary Create a product (admin only)
+ */
+export const CreateProductBody = zod.object({
+  name: zod.string(),
+  category: zod.string(),
+  unit: zod.string(),
+  unitPrice: zod.number(),
+  description: zod.string().optional(),
+  isActive: zod.boolean().optional(),
+  sortOrder: zod.number().optional(),
+});
+
+/**
+ * @summary Update a product (admin only)
+ */
+export const UpdateProductParams = zod.object({
+  productId: zod.coerce.number(),
+});
+
+export const UpdateProductBody = zod.object({
+  name: zod.string(),
+  category: zod.string(),
+  unit: zod.string(),
+  unitPrice: zod.number(),
+  description: zod.string().optional(),
+  isActive: zod.boolean().optional(),
+  sortOrder: zod.number().optional(),
+});
+
+export const UpdateProductResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  category: zod.string(),
+  unit: zod.string(),
+  unitPrice: zod.number(),
+  description: zod.string().nullish(),
+  isActive: zod.boolean(),
+  sortOrder: zod.number(),
+  createdAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Delete a product (admin only)
+ */
+export const DeleteProductParams = zod.object({
+  productId: zod.coerce.number(),
+});
+
+export const DeleteProductResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
+ * @summary List purchase orders (scoped to user role/sector)
+ */
+export const ListPurchaseOrdersQueryParams = zod.object({
+  sectorId: zod.coerce.number().optional(),
+  status: zod.enum(["draft", "submitted", "approved", "rejected"]).optional(),
+  cycleId: zod.coerce.number().optional(),
+});
+
+export const ListPurchaseOrdersResponseItem = zod.object({
+  id: zod.number(),
+  sectorId: zod.number(),
+  sector: zod
+    .object({
+      id: zod.number(),
+      name: zod.string(),
+      code: zod.string(),
+      parentId: zod.number().nullish(),
+      depth: zod.number(),
+      responsibleUserId: zod.number().nullish(),
+      isActive: zod.boolean(),
+      sortOrder: zod.number(),
+      createdAt: zod.coerce.date(),
+    })
+    .optional(),
+  budgetCycleId: zod.number(),
+  createdBy: zod.number(),
+  createdByUser: zod
+    .object({
+      id: zod.number(),
+      name: zod.string(),
+      email: zod.string(),
+      role: zod.enum([
+        "super_admin",
+        "ceo",
+        "ministry_head",
+        "department_head",
+        "viewer",
+      ]),
+      sectorId: zod.number().nullish(),
+      isActive: zod.boolean(),
+      createdAt: zod.coerce.date(),
+    })
+    .optional(),
+  status: zod.enum(["draft", "submitted", "approved", "rejected"]),
+  notes: zod.string().nullish(),
+  totalAmount: zod.number(),
+  submittedAt: zod.coerce.date().nullish(),
+  reviewedAt: zod.coerce.date().nullish(),
+  reviewedBy: zod.number().nullish(),
+  reviewedByUser: zod
+    .object({
+      id: zod.number(),
+      name: zod.string(),
+      email: zod.string(),
+      role: zod.enum([
+        "super_admin",
+        "ceo",
+        "ministry_head",
+        "department_head",
+        "viewer",
+      ]),
+      sectorId: zod.number().nullish(),
+      isActive: zod.boolean(),
+      createdAt: zod.coerce.date(),
+    })
+    .nullish(),
+  rejectionReason: zod.string().nullish(),
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      orderId: zod.number(),
+      productId: zod.number(),
+      product: zod
+        .object({
+          id: zod.number(),
+          name: zod.string(),
+          category: zod.string(),
+          unit: zod.string(),
+          unitPrice: zod.number(),
+          description: zod.string().nullish(),
+          isActive: zod.boolean(),
+          sortOrder: zod.number(),
+          createdAt: zod.coerce.date(),
+        })
+        .optional(),
+      quantity: zod.number(),
+      unitPriceSnapshot: zod.number(),
+      lineTotal: zod.number(),
+      notes: zod.string().nullish(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+  createdAt: zod.coerce.date(),
+});
+export const ListPurchaseOrdersResponse = zod.array(
+  ListPurchaseOrdersResponseItem,
+);
+
+/**
+ * @summary Create a new draft purchase order
+ */
+export const CreatePurchaseOrderBody = zod.object({
+  sectorId: zod.number(),
+  budgetCycleId: zod.number(),
+  notes: zod.string().optional(),
+});
+
+/**
+ * @summary Get a purchase order with its line items
+ */
+export const GetPurchaseOrderParams = zod.object({
+  orderId: zod.coerce.number(),
+});
+
+export const GetPurchaseOrderResponse = zod.object({
+  id: zod.number(),
+  sectorId: zod.number(),
+  sector: zod
+    .object({
+      id: zod.number(),
+      name: zod.string(),
+      code: zod.string(),
+      parentId: zod.number().nullish(),
+      depth: zod.number(),
+      responsibleUserId: zod.number().nullish(),
+      isActive: zod.boolean(),
+      sortOrder: zod.number(),
+      createdAt: zod.coerce.date(),
+    })
+    .optional(),
+  budgetCycleId: zod.number(),
+  createdBy: zod.number(),
+  createdByUser: zod
+    .object({
+      id: zod.number(),
+      name: zod.string(),
+      email: zod.string(),
+      role: zod.enum([
+        "super_admin",
+        "ceo",
+        "ministry_head",
+        "department_head",
+        "viewer",
+      ]),
+      sectorId: zod.number().nullish(),
+      isActive: zod.boolean(),
+      createdAt: zod.coerce.date(),
+    })
+    .optional(),
+  status: zod.enum(["draft", "submitted", "approved", "rejected"]),
+  notes: zod.string().nullish(),
+  totalAmount: zod.number(),
+  submittedAt: zod.coerce.date().nullish(),
+  reviewedAt: zod.coerce.date().nullish(),
+  reviewedBy: zod.number().nullish(),
+  reviewedByUser: zod
+    .object({
+      id: zod.number(),
+      name: zod.string(),
+      email: zod.string(),
+      role: zod.enum([
+        "super_admin",
+        "ceo",
+        "ministry_head",
+        "department_head",
+        "viewer",
+      ]),
+      sectorId: zod.number().nullish(),
+      isActive: zod.boolean(),
+      createdAt: zod.coerce.date(),
+    })
+    .nullish(),
+  rejectionReason: zod.string().nullish(),
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      orderId: zod.number(),
+      productId: zod.number(),
+      product: zod
+        .object({
+          id: zod.number(),
+          name: zod.string(),
+          category: zod.string(),
+          unit: zod.string(),
+          unitPrice: zod.number(),
+          description: zod.string().nullish(),
+          isActive: zod.boolean(),
+          sortOrder: zod.number(),
+          createdAt: zod.coerce.date(),
+        })
+        .optional(),
+      quantity: zod.number(),
+      unitPriceSnapshot: zod.number(),
+      lineTotal: zod.number(),
+      notes: zod.string().nullish(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+  createdAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Submit a draft order for approval
+ */
+export const SubmitPurchaseOrderParams = zod.object({
+  orderId: zod.coerce.number(),
+});
+
+export const SubmitPurchaseOrderResponse = zod.object({
+  id: zod.number(),
+  sectorId: zod.number(),
+  sector: zod
+    .object({
+      id: zod.number(),
+      name: zod.string(),
+      code: zod.string(),
+      parentId: zod.number().nullish(),
+      depth: zod.number(),
+      responsibleUserId: zod.number().nullish(),
+      isActive: zod.boolean(),
+      sortOrder: zod.number(),
+      createdAt: zod.coerce.date(),
+    })
+    .optional(),
+  budgetCycleId: zod.number(),
+  createdBy: zod.number(),
+  createdByUser: zod
+    .object({
+      id: zod.number(),
+      name: zod.string(),
+      email: zod.string(),
+      role: zod.enum([
+        "super_admin",
+        "ceo",
+        "ministry_head",
+        "department_head",
+        "viewer",
+      ]),
+      sectorId: zod.number().nullish(),
+      isActive: zod.boolean(),
+      createdAt: zod.coerce.date(),
+    })
+    .optional(),
+  status: zod.enum(["draft", "submitted", "approved", "rejected"]),
+  notes: zod.string().nullish(),
+  totalAmount: zod.number(),
+  submittedAt: zod.coerce.date().nullish(),
+  reviewedAt: zod.coerce.date().nullish(),
+  reviewedBy: zod.number().nullish(),
+  reviewedByUser: zod
+    .object({
+      id: zod.number(),
+      name: zod.string(),
+      email: zod.string(),
+      role: zod.enum([
+        "super_admin",
+        "ceo",
+        "ministry_head",
+        "department_head",
+        "viewer",
+      ]),
+      sectorId: zod.number().nullish(),
+      isActive: zod.boolean(),
+      createdAt: zod.coerce.date(),
+    })
+    .nullish(),
+  rejectionReason: zod.string().nullish(),
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      orderId: zod.number(),
+      productId: zod.number(),
+      product: zod
+        .object({
+          id: zod.number(),
+          name: zod.string(),
+          category: zod.string(),
+          unit: zod.string(),
+          unitPrice: zod.number(),
+          description: zod.string().nullish(),
+          isActive: zod.boolean(),
+          sortOrder: zod.number(),
+          createdAt: zod.coerce.date(),
+        })
+        .optional(),
+      quantity: zod.number(),
+      unitPriceSnapshot: zod.number(),
+      lineTotal: zod.number(),
+      notes: zod.string().nullish(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+  createdAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Approve or reject a submitted purchase order
+ */
+export const ReviewPurchaseOrderParams = zod.object({
+  orderId: zod.coerce.number(),
+});
+
+export const ReviewPurchaseOrderBody = zod.object({
+  action: zod.enum(["approve", "reject"]),
+  rejectionReason: zod.string().optional(),
+});
+
+export const ReviewPurchaseOrderResponse = zod.object({
+  id: zod.number(),
+  sectorId: zod.number(),
+  sector: zod
+    .object({
+      id: zod.number(),
+      name: zod.string(),
+      code: zod.string(),
+      parentId: zod.number().nullish(),
+      depth: zod.number(),
+      responsibleUserId: zod.number().nullish(),
+      isActive: zod.boolean(),
+      sortOrder: zod.number(),
+      createdAt: zod.coerce.date(),
+    })
+    .optional(),
+  budgetCycleId: zod.number(),
+  createdBy: zod.number(),
+  createdByUser: zod
+    .object({
+      id: zod.number(),
+      name: zod.string(),
+      email: zod.string(),
+      role: zod.enum([
+        "super_admin",
+        "ceo",
+        "ministry_head",
+        "department_head",
+        "viewer",
+      ]),
+      sectorId: zod.number().nullish(),
+      isActive: zod.boolean(),
+      createdAt: zod.coerce.date(),
+    })
+    .optional(),
+  status: zod.enum(["draft", "submitted", "approved", "rejected"]),
+  notes: zod.string().nullish(),
+  totalAmount: zod.number(),
+  submittedAt: zod.coerce.date().nullish(),
+  reviewedAt: zod.coerce.date().nullish(),
+  reviewedBy: zod.number().nullish(),
+  reviewedByUser: zod
+    .object({
+      id: zod.number(),
+      name: zod.string(),
+      email: zod.string(),
+      role: zod.enum([
+        "super_admin",
+        "ceo",
+        "ministry_head",
+        "department_head",
+        "viewer",
+      ]),
+      sectorId: zod.number().nullish(),
+      isActive: zod.boolean(),
+      createdAt: zod.coerce.date(),
+    })
+    .nullish(),
+  rejectionReason: zod.string().nullish(),
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      orderId: zod.number(),
+      productId: zod.number(),
+      product: zod
+        .object({
+          id: zod.number(),
+          name: zod.string(),
+          category: zod.string(),
+          unit: zod.string(),
+          unitPrice: zod.number(),
+          description: zod.string().nullish(),
+          isActive: zod.boolean(),
+          sortOrder: zod.number(),
+          createdAt: zod.coerce.date(),
+        })
+        .optional(),
+      quantity: zod.number(),
+      unitPriceSnapshot: zod.number(),
+      lineTotal: zod.number(),
+      notes: zod.string().nullish(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+  createdAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Add a line item to a draft purchase order
+ */
+export const AddOrderItemParams = zod.object({
+  orderId: zod.coerce.number(),
+});
+
+export const AddOrderItemBody = zod.object({
+  productId: zod.number(),
+  quantity: zod.number(),
+  notes: zod.string().optional(),
+});
+
+/**
+ * @summary Remove a line item from a draft order
+ */
+export const RemoveOrderItemParams = zod.object({
+  orderId: zod.coerce.number(),
+  itemId: zod.coerce.number(),
+});
+
+export const RemoveOrderItemResponse = zod.object({
+  id: zod.number(),
+  sectorId: zod.number(),
+  sector: zod
+    .object({
+      id: zod.number(),
+      name: zod.string(),
+      code: zod.string(),
+      parentId: zod.number().nullish(),
+      depth: zod.number(),
+      responsibleUserId: zod.number().nullish(),
+      isActive: zod.boolean(),
+      sortOrder: zod.number(),
+      createdAt: zod.coerce.date(),
+    })
+    .optional(),
+  budgetCycleId: zod.number(),
+  createdBy: zod.number(),
+  createdByUser: zod
+    .object({
+      id: zod.number(),
+      name: zod.string(),
+      email: zod.string(),
+      role: zod.enum([
+        "super_admin",
+        "ceo",
+        "ministry_head",
+        "department_head",
+        "viewer",
+      ]),
+      sectorId: zod.number().nullish(),
+      isActive: zod.boolean(),
+      createdAt: zod.coerce.date(),
+    })
+    .optional(),
+  status: zod.enum(["draft", "submitted", "approved", "rejected"]),
+  notes: zod.string().nullish(),
+  totalAmount: zod.number(),
+  submittedAt: zod.coerce.date().nullish(),
+  reviewedAt: zod.coerce.date().nullish(),
+  reviewedBy: zod.number().nullish(),
+  reviewedByUser: zod
+    .object({
+      id: zod.number(),
+      name: zod.string(),
+      email: zod.string(),
+      role: zod.enum([
+        "super_admin",
+        "ceo",
+        "ministry_head",
+        "department_head",
+        "viewer",
+      ]),
+      sectorId: zod.number().nullish(),
+      isActive: zod.boolean(),
+      createdAt: zod.coerce.date(),
+    })
+    .nullish(),
+  rejectionReason: zod.string().nullish(),
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      orderId: zod.number(),
+      productId: zod.number(),
+      product: zod
+        .object({
+          id: zod.number(),
+          name: zod.string(),
+          category: zod.string(),
+          unit: zod.string(),
+          unitPrice: zod.number(),
+          description: zod.string().nullish(),
+          isActive: zod.boolean(),
+          sortOrder: zod.number(),
+          createdAt: zod.coerce.date(),
+        })
+        .optional(),
+      quantity: zod.number(),
+      unitPriceSnapshot: zod.number(),
+      lineTotal: zod.number(),
+      notes: zod.string().nullish(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+  createdAt: zod.coerce.date(),
+});
+
+/**
  * @summary Get audit log with filters
  */
 export const getAuditLogQueryLimitDefault = 50;

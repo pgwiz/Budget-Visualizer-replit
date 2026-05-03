@@ -84,7 +84,7 @@ router.get("/sectors/tree", requireAuth, async (req, res): Promise<void> => {
 });
 
 router.get("/sectors/:sectorId/tree", requireAuth, async (req, res): Promise<void> => {
-  const sectorId = parseInt(req.params.sectorId);
+  const sectorId = parseInt(req.params['sectorId'] as string);
   const cycleIdParam = req.query.cycleId ? parseInt(req.query.cycleId as string) : null;
   const cycleId = cycleIdParam ?? await getActiveCycleId();
   const sector = await db.select().from(sectorsTable).where(eq(sectorsTable.id, sectorId)).limit(1);
@@ -95,7 +95,7 @@ router.get("/sectors/:sectorId/tree", requireAuth, async (req, res): Promise<voi
 });
 
 router.get("/sectors/:sectorId", requireAuth, async (req, res): Promise<void> => {
-  const sectorId = parseInt(req.params.sectorId);
+  const sectorId = parseInt(req.params['sectorId'] as string);
   const cycleId = await getActiveCycleId();
   const sectors = await db.select().from(sectorsTable).where(eq(sectorsTable.id, sectorId)).limit(1);
   if (!sectors[0]) { res.status(404).json({ error: "Not Found" }); return; }
@@ -115,7 +115,7 @@ router.post("/sectors", requireAuth, requireRole("super_admin"), async (req, res
 });
 
 router.put("/sectors/:sectorId", requireAuth, requireRole("super_admin"), async (req, res): Promise<void> => {
-  const sectorId = parseInt(req.params.sectorId);
+  const sectorId = parseInt(req.params['sectorId'] as string);
   const { name, code, parentId, responsibleUserId, isActive, sortOrder } = req.body;
   const updates: any = { updatedAt: new Date() };
   if (name != null) updates.name = name;
@@ -130,7 +130,7 @@ router.put("/sectors/:sectorId", requireAuth, requireRole("super_admin"), async 
 });
 
 router.delete("/sectors/:sectorId", requireAuth, requireRole("super_admin"), async (req, res): Promise<void> => {
-  await db.delete(sectorsTable).where(eq(sectorsTable.id, parseInt(req.params.sectorId)));
+  await db.delete(sectorsTable).where(eq(sectorsTable.id, parseInt(req.params['sectorId'] as string)));
   res.json({ message: "Sector deleted" });
 });
 

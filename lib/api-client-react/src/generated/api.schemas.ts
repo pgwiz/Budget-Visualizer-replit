@@ -306,6 +306,94 @@ export interface PaginatedAuditLog {
   limit: number;
 }
 
+export interface Product {
+  id: number;
+  name: string;
+  category: string;
+  unit: string;
+  unitPrice: number;
+  description?: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface CreateProductBody {
+  name: string;
+  category: string;
+  unit: string;
+  unitPrice: number;
+  description?: string;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
+export interface PurchaseOrderItem {
+  id: number;
+  orderId: number;
+  productId: number;
+  product?: Product;
+  quantity: number;
+  unitPriceSnapshot: number;
+  lineTotal: number;
+  notes?: string | null;
+  createdAt: string;
+}
+
+export type PurchaseOrderWithDetailsStatus =
+  (typeof PurchaseOrderWithDetailsStatus)[keyof typeof PurchaseOrderWithDetailsStatus];
+
+export const PurchaseOrderWithDetailsStatus = {
+  draft: "draft",
+  submitted: "submitted",
+  approved: "approved",
+  rejected: "rejected",
+} as const;
+
+export interface PurchaseOrderWithDetails {
+  id: number;
+  sectorId: number;
+  sector?: Sector;
+  budgetCycleId: number;
+  createdBy: number;
+  createdByUser?: User;
+  status: PurchaseOrderWithDetailsStatus;
+  notes?: string | null;
+  totalAmount: number;
+  submittedAt?: string | null;
+  reviewedAt?: string | null;
+  reviewedBy?: number | null;
+  reviewedByUser?: User | null;
+  rejectionReason?: string | null;
+  items: PurchaseOrderItem[];
+  createdAt: string;
+}
+
+export interface CreatePurchaseOrderBody {
+  sectorId: number;
+  budgetCycleId: number;
+  notes?: string;
+}
+
+export interface AddOrderItemBody {
+  productId: number;
+  quantity: number;
+  notes?: string;
+}
+
+export type ReviewOrderBodyAction =
+  (typeof ReviewOrderBodyAction)[keyof typeof ReviewOrderBodyAction];
+
+export const ReviewOrderBodyAction = {
+  approve: "approve",
+  reject: "reject",
+} as const;
+
+export interface ReviewOrderBody {
+  action: ReviewOrderBodyAction;
+  rejectionReason?: string;
+}
+
 export interface SectorBreakdownItem {
   sectorId: number;
   sectorName: string;
@@ -366,6 +454,27 @@ export type GetRecentActivityParams = {
 export type GetBalanceBreakdownParams = {
   cycleId?: number;
 };
+
+export type ListProductsParams = {
+  category?: string;
+  activeOnly?: boolean;
+};
+
+export type ListPurchaseOrdersParams = {
+  sectorId?: number;
+  status?: ListPurchaseOrdersStatus;
+  cycleId?: number;
+};
+
+export type ListPurchaseOrdersStatus =
+  (typeof ListPurchaseOrdersStatus)[keyof typeof ListPurchaseOrdersStatus];
+
+export const ListPurchaseOrdersStatus = {
+  draft: "draft",
+  submitted: "submitted",
+  approved: "approved",
+  rejected: "rejected",
+} as const;
 
 export type GetAuditLogParams = {
   cycleId?: number;

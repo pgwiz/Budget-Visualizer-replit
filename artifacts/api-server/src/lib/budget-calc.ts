@@ -1,4 +1,4 @@
-import { db, allocationsTable, budgetCyclesTable } from "@workspace/db";
+import { db, allocationsTable, budgetCyclesTable, purchaseOrdersTable } from "@workspace/db";
 import { eq, and, inArray, sql } from "drizzle-orm";
 
 export async function getTotalAllocated(sectorId: number, cycleId: number): Promise<number> {
@@ -46,6 +46,21 @@ export async function getTotalAllocatedFrom(sectorId: number | null, cycleId: nu
   return parseFloat(result[0]?.total ?? "0");
 }
 
+/* Sum of approved purchase orders for a sector in a cycle */
+export async function getTotalApprovedPurchases(sectorId: number, cycleId: number): Promise<number> {
+  const result = await db
+    .select({ total: sql<string>`COALESCE(SUM(total_amount), 0)` })
+    .from(purchaseOrdersTable)
+    .where(
+      and(
+        eq(purchaseOrdersTable.sectorId, sectorId),
+        eq(purchaseOrdersTable.budgetCycleId, cycleId),
+        eq(purchaseOrdersTable.status, "approved")
+      )
+    );
+  return parseFloat(result[0]?.total ?? "0");
+}
+
 export async function getAvailableBalance(sectorId: number | null, cycleId: number): Promise<number> {
   if (sectorId === null) {
     const cycle = await db.select().from(budgetCyclesTable).where(eq(budgetCyclesTable.id, cycleId)).limit(1);
@@ -54,9 +69,10 @@ export async function getAvailableBalance(sectorId: number | null, cycleId: numb
     const allocated = await getTotalAllocatedFrom(null, cycleId);
     return totalBudget - allocated;
   }
-  const netReceived = await getNetAllocated(sectorId, cycleId);
-  const distributed = await getTotalAllocatedFrom(sectorId, cycleId);
-  return netReceived - distributed;
+  const netReceived   = await getNetAllocated(sectorId, cycleId);
+  const distributed   = await getTotalAllocatedFrom(sectorId, cycleId);
+  const purchases     = await getTotalApprovedPurchases(sectorId, cycleId);
+  return netReceived - distributed - purchases;
 }
 
 export async function getUtilizationPct(sectorId: number | null, cycleId: number): Promise<number> {
@@ -71,5 +87,6 @@ export async function getUtilizationPct(sectorId: number | null, cycleId: number
   const netReceived = await getNetAllocated(sectorId, cycleId);
   if (netReceived === 0) return 0;
   const distributed = await getTotalAllocatedFrom(sectorId, cycleId);
-  return Math.min(100, (distributed / netReceived) * 100);
+  const purchases   = await getTotalApprovedPurchases(sectorId, cycleId);
+  return Math.min(100, ((distributed + purchases) / netReceived) * 100);
 }

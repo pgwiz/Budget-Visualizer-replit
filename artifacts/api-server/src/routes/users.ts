@@ -41,14 +41,14 @@ router.post("/users", requireAuth, requireRole("super_admin"), async (req, res):
 });
 
 router.get("/users/:userId", requireAuth, async (req, res): Promise<void> => {
-  const userId = parseInt(req.params.userId);
+  const userId = parseInt(req.params['userId'] as string);
   const users = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
   if (!users[0]) { res.status(404).json({ error: "Not Found" }); return; }
   res.json(await userWithSector(users[0]));
 });
 
 router.put("/users/:userId", requireAuth, requireRole("super_admin"), async (req, res): Promise<void> => {
-  const userId = parseInt(req.params.userId);
+  const userId = parseInt(req.params['userId'] as string);
   const { name, email, role, sectorId, isActive, password } = req.body;
   const updates: any = { updatedAt: new Date() };
   if (name != null) updates.name = name;
@@ -63,7 +63,7 @@ router.put("/users/:userId", requireAuth, requireRole("super_admin"), async (req
 });
 
 router.delete("/users/:userId", requireAuth, requireRole("super_admin"), async (req, res): Promise<void> => {
-  const userId = parseInt(req.params.userId);
+  const userId = parseInt(req.params['userId'] as string);
   await db.delete(usersTable).where(eq(usersTable.id, userId));
   res.json({ message: "User deleted" });
 });
