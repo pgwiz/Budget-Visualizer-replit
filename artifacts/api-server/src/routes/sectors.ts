@@ -43,24 +43,36 @@ async function enrichSector(sector: any, cycleId: number | null) {
   };
 }
 
-async function buildTreeNode(sector: any, cycleId: number | null, allSectors: any[]): Promise<any> {
+async function buildTreeNode(sector: any, cycleId: number | null, allSectors: any[], cycleTotalBudget?: number): Promise<any> {
   const children = allSectors.filter(s => s.parentId === sector.id);
   let responsibleUser = null;
   if (sector.responsibleUserId) {
     const users = await db.select({ id: usersTable.id, name: usersTable.name, email: usersTable.email, role: usersTable.role }).from(usersTable).where(eq(usersTable.id, sector.responsibleUserId)).limit(1);
     responsibleUser = users[0] || null;
   }
-  let totalAllocated = 0, totalRevoked = 0, availableBalance = 0, utilizationPct = 0;
+  const isRoot = !sector.parentId;
+  let totalAllocated = 0, totalRevoked = 0, netAllocated = 0, availableBalance = 0, utilizationPct = 0;
   if (cycleId) {
-    totalAllocated = await getTotalAllocated(sector.id, cycleId);
-    totalRevoked = await getTotalRevoked(sector.id, cycleId);
-    availableBalance = await getAvailableBalance(sector.id, cycleId);
-    utilizationPct = await getUtilizationPct(sector.id, cycleId);
+    if (isRoot && cycleTotalBudget != null) {
+      // Root sector: its "received" budget is the cycle total; compute outflows directly
+      const distributed = await getTotalAllocatedFrom(sector.id, cycleId);
+      totalAllocated = cycleTotalBudget;
+      totalRevoked = 0;
+      netAllocated = cycleTotalBudget;
+      availableBalance = cycleTotalBudget - distributed;
+      utilizationPct = cycleTotalBudget > 0 ? Math.min(100, (distributed / cycleTotalBudget) * 100) : 0;
+    } else {
+      totalAllocated = await getTotalAllocated(sector.id, cycleId);
+      totalRevoked = await getTotalRevoked(sector.id, cycleId);
+      netAllocated = totalAllocated - totalRevoked;
+      availableBalance = await getAvailableBalance(sector.id, cycleId);
+      utilizationPct = await getUtilizationPct(sector.id, cycleId);
+    }
   }
-  const childNodes = await Promise.all(children.map(c => buildTreeNode(c, cycleId, allSectors)));
+  const childNodes = await Promise.all(children.map(c => buildTreeNode(c, cycleId, allSectors, cycleTotalBudget)));
   return {
     id: sector.id, name: sector.name, code: sector.code, depth: sector.depth, parentId: sector.parentId,
-    totalAllocated, totalRevoked, netAllocated: totalAllocated - totalRevoked,
+    totalAllocated, totalRevoked, netAllocated,
     availableBalance, utilizationPct, responsibleUser,
     children: childNodes.sort((a, b) => a.id - b.id),
   };
@@ -86,20 +98,24 @@ router.get("/sectors/tree", requireAuth, async (req, res): Promise<void> => {
   const cycleId = cycleIdParam ?? await getActiveCycleId();
   const allSectors = await db.select().from(sectorsTable).orderBy(sectorsTable.sortOrder, sectorsTable.name);
 
+  // Get cycle total budget for root-sector correction
+  let cycleTotalBudget: number | undefined;
+  if (cycleId) {
+    const cycleRow = await db.select({ totalBudget: budgetCyclesTable.totalBudget }).from(budgetCyclesTable).where(eq(budgetCyclesTable.id, cycleId)).limit(1);
+    cycleTotalBudget = cycleRow[0] ? parseFloat(cycleRow[0].totalBudget) : undefined;
+  }
+
   const scopeSectorId = getUserScopeId(user);
   if (scopeSectorId !== null) {
     // Return tree rooted at user's sector only
-    const node = await buildTreeNode(
-      allSectors.find(s => s.id === scopeSectorId) ?? allSectors[0],
-      cycleId,
-      allSectors,
-    );
+    const sectorRow = allSectors.find(s => s.id === scopeSectorId) ?? allSectors[0];
+    const node = await buildTreeNode(sectorRow, cycleId, allSectors, cycleTotalBudget);
     res.json([node]);
     return;
   }
 
   const roots = allSectors.filter(s => s.parentId === null);
-  const tree = await Promise.all(roots.map(r => buildTreeNode(r, cycleId, allSectors)));
+  const tree = await Promise.all(roots.map(r => buildTreeNode(r, cycleId, allSectors, cycleTotalBudget)));
   res.json(tree);
 });
 

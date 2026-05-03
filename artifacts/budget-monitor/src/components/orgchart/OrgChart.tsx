@@ -154,7 +154,7 @@ function OrgNode({ ln, effectiveX, effectiveY, selected, onClick, onDragEnd, ani
       dragElastic={0}
       /* Reset the CSS transform to 0 after each committed drag so the
          next drag always starts from a clean transform offset.          */
-      animate={{ x: 0, y: 0 }}
+      animate={{ x: 0, y: 0, opacity: 1, scale: 1 }}
       initial={{ opacity: 0, scale: 0.75, y: -20 }}
       style={{
         position:   'absolute',
