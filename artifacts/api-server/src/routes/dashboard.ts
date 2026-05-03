@@ -28,8 +28,10 @@ router.get("/dashboard/summary", requireAuth, async (req, res): Promise<void> =>
 
   let totalAllocated = 0, totalRevoked = 0, availableBalance = 0, utilizationPct = 0;
   if (cycleId) {
-    const allocResult = await db.select({ total: sql<string>`COALESCE(SUM(amount), 0)` }).from(allocationsTable).where(and(eq(allocationsTable.budgetCycleId, cycleId), inArray(allocationsTable.status, ["active", "pending", "exhausted"])));
-    const revResult = await db.select({ total: sql<string>`COALESCE(SUM(amount), 0)` }).from(allocationsTable).where(and(eq(allocationsTable.budgetCycleId, cycleId), eq(allocationsTable.status, "revoked")));
+    // Only count TOP-LEVEL allocations (from the National Budget Pool, fromSectorId IS NULL)
+    // to avoid double-counting ministry→sub-sector→sub-sub flows.
+    const allocResult = await db.select({ total: sql<string>`COALESCE(SUM(amount), 0)` }).from(allocationsTable).where(and(eq(allocationsTable.budgetCycleId, cycleId), sql`${allocationsTable.fromSectorId} IS NULL`, inArray(allocationsTable.status, ["active", "pending", "exhausted"])));
+    const revResult = await db.select({ total: sql<string>`COALESCE(SUM(amount), 0)` }).from(allocationsTable).where(and(eq(allocationsTable.budgetCycleId, cycleId), sql`${allocationsTable.fromSectorId} IS NULL`, eq(allocationsTable.status, "revoked")));
     totalAllocated = parseFloat(allocResult[0]?.total ?? "0");
     totalRevoked = parseFloat(revResult[0]?.total ?? "0");
     availableBalance = totalBudget - totalAllocated;
@@ -39,8 +41,8 @@ router.get("/dashboard/summary", requireAuth, async (req, res): Promise<void> =>
   const sectorCount = (await db.select({ c: sql<number>`COUNT(*)` }).from(sectorsTable))[0]?.c ?? 0;
   const activeAllocations = cycleId ? (await db.select({ c: sql<number>`COUNT(*)` }).from(allocationsTable).where(and(eq(allocationsTable.budgetCycleId, cycleId), eq(allocationsTable.status, "active"))))[0]?.c ?? 0 : 0;
 
-  // Top-level sectors with stats
-  const topSectors = await db.select().from(sectorsTable).where(sql`${sectorsTable.parentId} IS NULL`).limit(10);
+  // Ministry-level sectors (depth=1, children of ROOT) — NOT root itself
+  const topSectors = await db.select().from(sectorsTable).where(eq(sectorsTable.depth, 1)).limit(10);
   const enrichedTop = await Promise.all(topSectors.map(async s => {
     const ta = cycleId ? await getTotalAllocated(s.id, cycleId) : 0;
     const tr = cycleId ? await getTotalRevoked(s.id, cycleId) : 0;
@@ -80,8 +82,8 @@ router.get("/dashboard/utilization-chart", requireAuth, async (req, res): Promis
     // Children of this sector
     sectors = await db.select().from(sectorsTable).where(eq(sectorsTable.parentId, sectorIdParam));
   } else {
-    // Top-level sectors
-    sectors = await db.select().from(sectorsTable).where(sql`${sectorsTable.parentId} IS NULL`);
+    // Ministry-level sectors (depth=1) — excludes ROOT which has no receivable allocations
+    sectors = await db.select().from(sectorsTable).where(eq(sectorsTable.depth, 1));
   }
 
   const result = await Promise.all(sectors.map(async s => {
@@ -103,14 +105,15 @@ router.get("/dashboard/allocation-timeline", requireAuth, async (req, res): Prom
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
 
+  // Only top-level allocations (fromSectorId IS NULL) so cumulative stays within budget bounds
   const allocs = await db.select().from(allocationsTable)
-    .where(and(eq(allocationsTable.budgetCycleId, cycleId), gte(allocationsTable.createdAt, cutoff)))
-    .orderBy(allocationsTable.createdAt);
+    .where(and(eq(allocationsTable.budgetCycleId, cycleId), gte(allocationsTable.allocatedAt, cutoff), sql`${allocationsTable.fromSectorId} IS NULL`))
+    .orderBy(allocationsTable.allocatedAt);
 
   // Group by date
   const byDate = new Map<string, { totalAllocated: number; totalRevoked: number; count: number }>();
   for (const a of allocs) {
-    const dateKey = a.createdAt.toISOString().split("T")[0];
+    const dateKey = a.allocatedAt.toISOString().split("T")[0];
     const existing = byDate.get(dateKey) || { totalAllocated: 0, totalRevoked: 0, count: 0 };
     if (a.status === "revoked") {
       existing.totalRevoked += parseFloat(a.amount);
@@ -160,7 +163,8 @@ router.get("/dashboard/balance-breakdown", requireAuth, async (req, res): Promis
   if (!cycle[0]) { res.status(404).json({ error: "Not Found" }); return; }
   const totalBudget = parseFloat(cycle[0].totalBudget);
 
-  const allocs = await db.select().from(allocationsTable).where(eq(allocationsTable.budgetCycleId, cycleId));
+  // Only count top-level allocations (fromSectorId IS NULL) to avoid double-counting sub-flows
+  const allocs = await db.select().from(allocationsTable).where(and(eq(allocationsTable.budgetCycleId, cycleId), sql`${allocationsTable.fromSectorId} IS NULL`));
   let totalAllocated = 0, totalRevoked = 0, pendingCount = 0, activeCount = 0, revokedCount = 0;
   for (const a of allocs) {
     if (a.status === "revoked") { totalRevoked += parseFloat(a.amount); revokedCount++; }
