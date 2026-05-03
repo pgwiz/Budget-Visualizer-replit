@@ -158,6 +158,7 @@ export default function AllocationsPage() {
         {isLoading ? (
           <LoadingSpinner size={40} className="py-20" />
         ) : (
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader className="bg-white/5">
               <TableRow className="hover:bg-transparent border-white/10">
@@ -208,6 +209,7 @@ export default function AllocationsPage() {
               ))}
             </TableBody>
           </Table>
+          </div>
         )}
       </GlassCard>
 

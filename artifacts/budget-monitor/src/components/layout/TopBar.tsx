@@ -1,5 +1,5 @@
 import { useLocation } from 'wouter';
-import { ChevronRight, User as UserIcon, LogOut, Bell, Shield } from 'lucide-react';
+import { ChevronRight, User as UserIcon, LogOut, Bell, Shield, Menu } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from '@/hooks/useAuth';
 import { useLogout, getGetMeQueryKey } from '@workspace/api-client-react';
 import { queryClient } from '@/lib/api';
+import { useSidebar } from '@/context/sidebar';
 
 const ROLE_LABELS: Record<string, string> = {
   super_admin:     'System Administrator',
@@ -41,6 +42,8 @@ const PAGE_LABELS: Record<string, string> = {
 export function TopBar() {
   const [location] = useLocation();
   const { user, isSuperAdmin } = useAuth();
+  const { toggle } = useSidebar();
+
   const logoutMutation = useLogout({
     mutation: {
       onSuccess: () => {
@@ -49,28 +52,42 @@ export function TopBar() {
     },
   });
 
-  const pathKey = location.split('/').filter(Boolean)[0] ?? '';
+  const pathKey   = location.split('/').filter(Boolean)[0] ?? '';
   const pageTitle = PAGE_LABELS[pathKey] ?? (pathKey.charAt(0).toUpperCase() + pathKey.slice(1));
   const roleColor = ROLE_COLORS[user?.role ?? ''] ?? '#94a3b8';
   const roleLabel = ROLE_LABELS[user?.role ?? ''] ?? user?.role ?? '';
   const initials  = user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() ?? '?';
 
   return (
-    <header className="h-14 border-b border-white/8 flex items-center justify-between px-6 sticky top-0 z-10 backdrop-blur-xl"
-      style={{ background: 'rgba(9,14,29,0.85)' }}>
+    <header
+      className="h-14 border-b border-white/8 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-10 backdrop-blur-xl"
+      style={{ background: 'rgba(9,14,29,0.85)' }}
+    >
+      <div className="flex items-center gap-3">
+        {/* Hamburger — mobile only */}
+        <button
+          onClick={toggle}
+          className="md:hidden p-2 -ml-1 text-white/40 hover:text-white hover:bg-white/8 rounded-xl transition-colors"
+          aria-label="Open menu"
+        >
+          <Menu size={20} />
+        </button>
 
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm">
-        <span className="text-white/25 text-xs">Budget Monitor</span>
-        <ChevronRight size={13} className="text-white/15" />
-        <span className="text-white font-semibold text-sm">{pageTitle}</span>
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-white/25 text-xs hidden sm:inline">Budget Monitor</span>
+          <ChevronRight size={13} className="text-white/15 hidden sm:inline" />
+          <span className="text-white font-semibold text-sm">{pageTitle}</span>
+        </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        {/* Admin indicator pill */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Admin pill */}
         {isSuperAdmin && (
-          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
-            style={{ color: '#f87171', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.2)' }}>
+          <div
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
+            style={{ color: '#f87171', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.2)' }}
+          >
             <Shield size={10} />
             Admin
           </div>

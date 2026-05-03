@@ -35,11 +35,12 @@ export default function SectorsPage() {
             </div>
           )}
           {isSuperAdmin && (
-            <Link href="/hierarchy-designer">
-              <a className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-400 text-sm font-semibold transition-all">
-                <Workflow size={15} />
-                Designer
-              </a>
+            <Link
+              href="/hierarchy-designer"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-400 text-sm font-semibold transition-all"
+            >
+              <Workflow size={15} />
+              Designer
             </Link>
           )}
         </div>
@@ -112,6 +113,7 @@ export default function SectorsPage() {
             {listLoading ? (
               <LoadingSpinner size={40} className="py-20" />
             ) : (
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader className="bg-white/5">
                   <TableRow className="hover:bg-transparent border-white/10">
@@ -126,8 +128,8 @@ export default function SectorsPage() {
                   {sectors?.map((sector) => (
                     <TableRow key={sector.id} className="hover:bg-white/5 border-white/5 transition-colors group">
                       <TableCell className="font-medium text-white">
-                        <Link href={`/sectors/${sector.id}`}>
-                          <a className="hover:text-blue-400 transition-colors">{sector.name}</a>
+                        <Link href={`/sectors/${sector.id}`} className="hover:text-blue-400 transition-colors">
+                          {sector.name}
                         </Link>
                       </TableCell>
                       <TableCell>
@@ -157,6 +159,7 @@ export default function SectorsPage() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             )}
           </GlassCard>
         </TabsContent>
