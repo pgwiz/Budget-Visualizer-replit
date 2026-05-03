@@ -115,6 +115,152 @@ function HierarchyNodeCard({ node, depth, isSelected, onSelect, defaultExpanded 
     [],
   );
 
+  /* ── Depth-0: wide horizontal card ── */
+  const cardInner =
+    depth === 0 ? (
+      <div className="flex items-center gap-4 p-4">
+        <UtilizationRing value={pct} size={72} strokeWidth={5} className="shrink-0" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-bold text-white text-sm truncate">{node.name}</span>
+                <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-wider shrink-0 px-1.5 py-0">
+                  {node.code}
+                </Badge>
+              </div>
+              <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
+                <span className="text-[10px] text-white/40">
+                  Received{' '}
+                  <span className="text-white/70 font-semibold" title={formatCurrency(node.netAllocated)}>
+                    {formatCompact(node.netAllocated)}
+                  </span>
+                </span>
+                <span className="text-[10px] text-white/40">
+                  Free{' '}
+                  <span
+                    className={`font-semibold ${node.availableBalance < 0 ? 'text-rose-400/80' : 'text-emerald-400/80'}`}
+                    title={formatCurrency(node.availableBalance)}
+                  >
+                    {formatCompact(node.availableBalance)}
+                  </span>
+                </span>
+              </div>
+              <div className="mt-2 h-1 w-full bg-white/10 rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min(100, pct)}%` }}
+                  transition={{ duration: 1, ease: 'easeOut', delay: 0.3 }}
+                  style={{
+                    background:
+                      pct >= 90
+                        ? 'linear-gradient(90deg,#ef4444,#f87171)'
+                        : pct >= 70
+                          ? 'linear-gradient(90deg,#f59e0b,#fcd34d)'
+                          : 'linear-gradient(90deg,#3b82f6,#60a5fa)',
+                  }}
+                />
+              </div>
+            </div>
+            <div className="flex flex-col gap-1.5 shrink-0">
+              <button
+                onClick={handleSelect}
+                className={cn(
+                  'p-1.5 rounded-lg transition-colors',
+                  isSelected ? 'bg-blue-500/30 text-blue-400' : 'hover:bg-white/10 text-white/30 hover:text-white/70',
+                )}
+                title="View details"
+              >
+                <ZoomIn size={13} />
+              </button>
+              {hasChildren && (
+                <button
+                  onClick={handleToggle}
+                  className="p-1.5 rounded-lg hover:bg-white/10 text-white/30 hover:text-white/70 transition-colors"
+                  title={expanded ? 'Collapse' : 'Expand'}
+                >
+                  {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    ) : (
+      /* ── Depth > 0: compact mini-card (no overflow) ── */
+      <div className="p-3 flex flex-col gap-2">
+        {/* Top: code badge + actions */}
+        <div className="flex items-center justify-between gap-1">
+          <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0 shrink-0">
+            {node.code}
+          </Badge>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleSelect}
+              className={cn(
+                'p-1 rounded-md transition-colors',
+                isSelected ? 'bg-blue-500/30 text-blue-400' : 'hover:bg-white/10 text-white/20 hover:text-white/60',
+              )}
+              title="View details"
+            >
+              <ZoomIn size={11} />
+            </button>
+            {hasChildren && (
+              <button
+                onClick={handleToggle}
+                className="p-1 rounded-md hover:bg-white/10 text-white/20 hover:text-white/60 transition-colors"
+                title={expanded ? 'Collapse' : 'Expand'}
+              >
+                {expanded ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Middle: ring + stats side by side */}
+        <div className="flex items-center gap-2.5">
+          <UtilizationRing value={pct} size={44} strokeWidth={3.5} className="shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-bold text-white truncate leading-tight">{node.name}</p>
+            <p className="text-[9px] text-white/40 mt-0.5 leading-tight">
+              Rcvd{' '}
+              <span className="text-white/65 font-semibold" title={formatCurrency(node.netAllocated)}>
+                {formatCompact(node.netAllocated)}
+              </span>
+            </p>
+            <p className="text-[9px] text-white/40 leading-tight">
+              Free{' '}
+              <span
+                className={`font-semibold ${node.availableBalance < 0 ? 'text-rose-400' : 'text-emerald-400/80'}`}
+                title={formatCurrency(node.availableBalance)}
+              >
+                {formatCompact(node.availableBalance)}
+              </span>
+            </p>
+          </div>
+        </div>
+
+        {/* Bottom: thin progress bar */}
+        <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+          <motion.div
+            className="h-full rounded-full"
+            initial={{ width: 0 }}
+            animate={{ width: `${Math.min(100, pct)}%` }}
+            transition={{ duration: 1, ease: 'easeOut', delay: 0.3 }}
+            style={{
+              background:
+                pct >= 90
+                  ? 'linear-gradient(90deg,#ef4444,#f87171)'
+                  : pct >= 70
+                    ? 'linear-gradient(90deg,#f59e0b,#fcd34d)'
+                    : 'linear-gradient(90deg,#3b82f6,#60a5fa)',
+            }}
+          />
+        </div>
+      </div>
+    );
+
   return (
     <div className="flex flex-col items-center">
       <motion.div
@@ -123,11 +269,9 @@ function HierarchyNodeCard({ node, depth, isSelected, onSelect, defaultExpanded 
         transition={{ duration: 0.35, delay: depth * 0.05 }}
         onClick={handleSelect}
         className={cn(
-          'relative w-full cursor-pointer rounded-2xl border transition-all duration-300 select-none',
+          'relative w-full cursor-pointer rounded-2xl border transition-all duration-300 select-none overflow-hidden',
           'hover:translate-y-[-2px] hover:shadow-xl',
-          isSelected
-            ? 'border-blue-400/70 ring-2 ring-blue-400/30 bg-blue-500/10'
-            : utilizationBg(pct),
+          isSelected ? 'border-blue-400/70 ring-2 ring-blue-400/30 bg-blue-500/10' : utilizationBg(pct),
         )}
         style={{
           boxShadow: isSelected
@@ -135,89 +279,7 @@ function HierarchyNodeCard({ node, depth, isSelected, onSelect, defaultExpanded 
             : `0 8px 24px ${utilizationGlow(pct)}`,
         }}
       >
-        <div className="flex items-center gap-4 p-4">
-          {/* Ring */}
-          <UtilizationRing
-            value={pct}
-            size={depth === 0 ? 72 : 56}
-            strokeWidth={depth === 0 ? 5 : 4}
-            className="shrink-0"
-          />
-
-          {/* Info */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className={cn('font-bold text-white truncate', depth === 0 ? 'text-sm' : 'text-xs')}>
-                    {node.name}
-                  </span>
-                  <Badge
-                    variant="outline"
-                    className="text-[9px] font-bold uppercase tracking-wider shrink-0 px-1.5 py-0"
-                  >
-                    {node.code}
-                  </Badge>
-                </div>
-                <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
-                  <span className="text-[10px] text-white/40">
-                    Received{' '}
-                    <span className="text-white/70 font-semibold" title={formatCurrency(node.netAllocated)}>
-                      {formatCompact(node.netAllocated)}
-                    </span>
-                  </span>
-                  <span className="text-[10px] text-white/40">
-                    Free{' '}
-                    <span className={`font-semibold ${node.availableBalance < 0 ? 'text-rose-400/80' : 'text-emerald-400/80'}`} title={formatCurrency(node.availableBalance)}>
-                      {formatCompact(node.availableBalance)}
-                    </span>
-                  </span>
-                </div>
-                {/* Progress bar */}
-                <div className="mt-2 h-1 w-full bg-white/10 rounded-full overflow-hidden">
-                  <motion.div
-                    className="h-full rounded-full"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${Math.min(100, pct)}%` }}
-                    transition={{ duration: 1, ease: 'easeOut', delay: 0.3 }}
-                    style={{
-                      background: pct >= 90
-                        ? 'linear-gradient(90deg, #ef4444, #f87171)'
-                        : pct >= 70
-                        ? 'linear-gradient(90deg, #f59e0b, #fcd34d)'
-                        : 'linear-gradient(90deg, #3b82f6, #60a5fa)',
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Action buttons */}
-              <div className="flex flex-col gap-1.5 shrink-0">
-                <button
-                  onClick={handleSelect}
-                  className={cn(
-                    'p-1.5 rounded-lg transition-colors text-xs',
-                    isSelected
-                      ? 'bg-blue-500/30 text-blue-400'
-                      : 'hover:bg-white/10 text-white/30 hover:text-white/70',
-                  )}
-                  title="View details"
-                >
-                  <ZoomIn size={13} />
-                </button>
-                {hasChildren && (
-                  <button
-                    onClick={handleToggle}
-                    className="p-1.5 rounded-lg hover:bg-white/10 text-white/30 hover:text-white/70 transition-colors"
-                    title={expanded ? 'Collapse' : 'Expand'}
-                  >
-                    {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+        {cardInner}
 
         {/* Selected glow pulse */}
         {isSelected && (
