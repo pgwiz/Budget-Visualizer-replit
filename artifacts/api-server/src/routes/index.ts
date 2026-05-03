@@ -10,6 +10,7 @@ import reportsRouter from "./reports";
 import productsRouter from "./products";
 import purchaseOrdersRouter from "./purchase-orders";
 import sectorControlsRouter from "./sector-controls";
+import approvalLimitsRouter from "./approval-limits";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(reportsRouter);
 router.use(productsRouter);
 router.use(purchaseOrdersRouter);
 router.use(sectorControlsRouter);
+router.use(approvalLimitsRouter);
 
 export default router;

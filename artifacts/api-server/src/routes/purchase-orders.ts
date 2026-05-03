@@ -1,7 +1,7 @@
 import { Router } from "express";
 import {
   db, purchaseOrdersTable, purchaseOrderItemsTable,
-  productsTable, sectorsTable, usersTable, sectorControlsTable,
+  productsTable, sectorsTable, usersTable, sectorControlsTable, approvalLimitsTable,
 } from "@workspace/db";
 import { eq, and, inArray } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
@@ -34,7 +34,6 @@ async function enrichOrder(order: any) {
     };
   }));
 
-  // Include active sector control for this sector (if any parent has moderation_down)
   let sectorControl = null;
   if (sector?.parentId) {
     const controls = await db.select().from(sectorControlsTable)
@@ -51,6 +50,9 @@ async function enrichOrder(order: any) {
     }
   }
 
+  // Compute who is the required approver for this PO (based on amount + hierarchy limits)
+  const requiredApprover = await computeRequiredApprover(order.sectorId, parseFloat(order.totalAmount));
+
   return {
     ...order,
     totalAmount: parseFloat(order.totalAmount),
@@ -58,8 +60,48 @@ async function enrichOrder(order: any) {
     createdByUser: creator ?? null,
     reviewedByUser,
     sectorControl,
+    requiredApprover,   // { sector, limit } | null  (null = ceo/super_admin)
     items,
   };
+}
+
+/**
+ * Walk the ancestor chain (starting from poSectorId's parent) and find
+ * the first sector whose approval limit covers the given amount.
+ * Returns { sector, limit } or null if ceo/super_admin must approve.
+ */
+async function computeRequiredApprover(poSectorId: number, amount: number) {
+  const allSectors = await db.select().from(sectorsTable);
+  const allLimits  = await db.select().from(approvalLimitsTable);
+
+  const sectorMap = new Map(allSectors.map(s => [s.id, s]));
+  const limitMap  = new Map(allLimits.map(l => [l.sectorId, l]));
+
+  const poSector = sectorMap.get(poSectorId);
+  if (!poSector?.parentId) return null;
+
+  let currentId: number | null = poSector.parentId;
+  while (currentId) {
+    const sector = sectorMap.get(currentId);
+    if (!sector) break;
+    const limit = limitMap.get(sector.id);
+    if (limit && parseFloat(limit.maxApprovableAmount) >= amount) {
+      // Find the responsible user for this sector
+      let responsibleUser = null;
+      if (sector.responsibleUserId) {
+        const [u] = await db.select({ id: usersTable.id, name: usersTable.name, role: usersTable.role })
+          .from(usersTable).where(eq(usersTable.id, sector.responsibleUserId)).limit(1);
+        responsibleUser = u ?? null;
+      }
+      return {
+        sector: { id: sector.id, name: sector.name, code: sector.code, depth: sector.depth },
+        limit: parseFloat(limit.maxApprovableAmount),
+        responsibleUser,
+      };
+    }
+    currentId = sector.parentId ?? null;
+  }
+  return null; // ceo / super_admin must handle
 }
 
 async function recomputeTotal(orderId: number) {
@@ -110,13 +152,11 @@ router.get("/purchase-orders", requireAuth, async (req, res): Promise<void> => {
   if (!["super_admin", "ceo"].includes(user.role)) {
     if (!user.sectorId) { res.json([]); return; }
 
-    if (user.role === "ministry_head") {
-      // Ministry heads see their sector + all descendant sectors (not just direct children)
+    if (["ministry_head", "department_head"].includes(user.role)) {
       const descendants = await getDescendantIds(user.sectorId);
       const visibleIds = [user.sectorId, ...descendants];
       rows = rows.filter((r) => visibleIds.includes(r.sectorId));
     } else {
-      // department_head and viewer see only their own sector
       rows = rows.filter((r) => r.sectorId === user.sectorId);
     }
   }
@@ -173,7 +213,6 @@ router.post("/purchase-orders/:orderId/submit", requireAuth, async (req, res): P
     res.status(400).json({ error: "Bad Request", message: "Cannot submit an order with no items" }); return;
   }
 
-  // ── Enforce sector controls on submission ──
   const [control] = await db.select().from(sectorControlsTable)
     .where(and(eq(sectorControlsTable.targetSectorId, order.sectorId), eq(sectorControlsTable.isActive, true)))
     .limit(1);
@@ -206,11 +245,12 @@ router.post("/purchase-orders/:orderId/submit", requireAuth, async (req, res): P
   res.json(await enrichOrder(updated));
 });
 
-/* Approve / Reject — enforces hierarchical chain */
+/* ── Approve / Reject ─────────────────────────────────────────── */
 router.post("/purchase-orders/:orderId/review", requireAuth, async (req, res): Promise<void> => {
   const user = (req as any).user;
-  if (!["super_admin", "ceo", "ministry_head"].includes(user.role)) {
-    res.status(403).json({ error: "Forbidden", message: "Only controlling officers can review orders" }); return;
+  // Viewers can never review
+  if (user.role === "viewer") {
+    res.status(403).json({ error: "Forbidden", message: "Viewers cannot review orders" }); return;
   }
 
   const id = parseInt(req.params['orderId'] as string);
@@ -220,29 +260,52 @@ router.post("/purchase-orders/:orderId/review", requireAuth, async (req, res): P
     res.status(400).json({ error: "Bad Request", message: "Only submitted orders can be reviewed" }); return;
   }
 
-  // ── Hierarchy enforcement ──
-  // ministry_head: can ONLY approve POs whose sector's parent is their own sector
-  // (i.e. they cannot approve their OWN sector's POs — only child sectors')
-  if (user.role === "ministry_head") {
+  const poAmount = parseFloat(order.totalAmount);
+
+  // ── Hierarchy + limit enforcement ──
+  if (!["super_admin", "ceo"].includes(user.role)) {
     if (!user.sectorId) {
       res.status(403).json({ error: "Forbidden", message: "Your account has no sector assigned" }); return;
     }
-    const [orderSector] = await db.select({ parentId: sectorsTable.parentId })
-      .from(sectorsTable).where(eq(sectorsTable.id, order.sectorId)).limit(1);
 
-    // PO sector must be within the ministry_head's tree but NOT their own sector
+    // Cannot approve own sector's POs
     if (order.sectorId === user.sectorId) {
       res.status(403).json({
         error: "Forbidden",
         message: "You cannot approve your own sector's purchase orders. They must be reviewed by your superior.",
       }); return;
     }
-    // PO sector must be a descendant of the ministry_head's sector
+
+    // PO sector must be a descendant of the approver's sector
     const ancestors = await getAncestorIds(order.sectorId);
     if (!ancestors.includes(user.sectorId)) {
       res.status(403).json({
         error: "Forbidden",
         message: "You can only approve purchase orders from sectors within your hierarchy.",
+      }); return;
+    }
+
+    // Check approval limit for this user's sector
+    const [limit] = await db.select().from(approvalLimitsTable)
+      .where(eq(approvalLimitsTable.sectorId, user.sectorId)).limit(1);
+
+    if (!limit) {
+      res.status(403).json({
+        error: "No Approval Authority",
+        message: "No approval limit is configured for your sector. Contact an administrator.",
+      }); return;
+    }
+
+    const maxAmount = parseFloat(limit.maxApprovableAmount);
+    if (poAmount > maxAmount) {
+      // Find who should actually approve this
+      const required = await computeRequiredApprover(order.sectorId, poAmount);
+      const escalateTo = required
+        ? `Please escalate to ${required.sector.name}.`
+        : "Please escalate to the Director General or above.";
+      res.status(403).json({
+        error: "Approval Limit Exceeded",
+        message: `This order (KSh ${poAmount.toLocaleString()}) exceeds your approval authority of KSh ${maxAmount.toLocaleString()}. ${escalateTo}`,
       }); return;
     }
   }
@@ -286,7 +349,6 @@ router.post("/purchase-orders/:orderId/items", requireAuth, async (req, res): Pr
     res.status(404).json({ error: "Not Found", message: "Product not found or inactive" }); return;
   }
 
-  // ── Category check against sector controls ──
   const [control] = await db.select().from(sectorControlsTable)
     .where(and(eq(sectorControlsTable.targetSectorId, order.sectorId), eq(sectorControlsTable.isActive, true)))
     .limit(1);
