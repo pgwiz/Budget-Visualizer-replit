@@ -8,7 +8,7 @@ import { useLocation } from 'wouter';
 import {
   Mail, Lock, Eye, EyeOff, Shield, BarChart3, GitBranch,
   Users, AlertTriangle, ChevronRight, Building2, School,
-  BookOpen, Zap, LogIn, Landmark,
+  BookOpen, Zap, LogIn, Landmark, Globe,
 } from 'lucide-react';
 import { queryClient } from '@/lib/api';
 import { getGetMeQueryKey } from '@workspace/api-client-react';
@@ -27,139 +27,164 @@ interface OrgUser {
 interface OrgNode {
   id: string;
   label: string;
-  icon: 'ministry' | 'authority' | 'institution' | 'school' | 'department';
+  icon: 'govt' | 'ministry' | 'authority' | 'institution' | 'school' | 'department';
   user?: OrgUser;
   children?: OrgNode[];
 }
 
 const ROLE_META: Record<Role, { label: string; color: string; bg: string }> = {
   super_admin:     { label: 'Sys Admin',  color: '#f87171', bg: 'rgba(248,113,113,0.12)' },
-  ceo:             { label: 'CEO / DG',   color: '#fbbf24', bg: 'rgba(251,191,36,0.12)'  },
-  ministry_head:   { label: 'Principal',  color: '#60a5fa', bg: 'rgba(96,165,250,0.12)'  },
+  ceo:             { label: 'CS / DG',    color: '#fbbf24', bg: 'rgba(251,191,36,0.12)'  },
+  ministry_head:   { label: 'Head / PS',  color: '#60a5fa', bg: 'rgba(96,165,250,0.12)'  },
   department_head: { label: 'HOD',        color: '#34d399', bg: 'rgba(52,211,153,0.12)'  },
   viewer:          { label: 'Auditor',    color: '#a78bfa', bg: 'rgba(167,139,250,0.12)' },
 };
 
 const ORG_TREE: OrgNode[] = [
   {
-    id: 'moe',
-    label: 'Ministry of Education',
-    icon: 'ministry',
+    id: 'national-govt',
+    label: 'National Government',
+    icon: 'govt',
     children: [
       {
-        id: 'cs-moe',
-        label: 'Cabinet Secretary, Ministry of Education',
-        icon: 'ministry',
-        user: { name: 'Cabinet Secretary, Ministry of Education', email: 'ceo@budget.go.ke', role: 'ceo', initials: 'CS' },
+        id: 'nat-admin',
+        label: 'National Budget Controller',
+        icon: 'govt',
+        user: { name: 'National Budget Controller', email: 'admin.nat@treasury.go.ke', role: 'super_admin', initials: 'NB' },
       },
       {
-        id: 'tvet-authority',
-        label: 'TVET Authority',
-        icon: 'authority',
+        id: 'cs-treasury',
+        label: 'Cabinet Secretary, National Treasury',
+        icon: 'govt',
+        user: { name: 'Prof. Njuguna Ndung\'u', email: 'cs.treasury@treasury.go.ke', role: 'ceo', initials: 'NN' },
+      },
+      {
+        id: 'moe',
+        label: 'Ministry of Education',
+        icon: 'ministry',
         children: [
           {
-            id: 'admin',
-            label: 'System Administrator',
-            icon: 'authority',
-            user: { name: 'System Administrator', email: 'admin@tvetauthority.go.ke', role: 'super_admin', initials: 'SA' },
+            id: 'cs-moe',
+            label: 'Cabinet Secretary, Ministry of Education',
+            icon: 'ministry',
+            user: { name: 'Cabinet Secretary, Ministry of Education', email: 'ceo@budget.go.ke', role: 'ceo', initials: 'CS' },
           },
           {
-            id: 'dg',
-            label: 'Dr. James Kiprotich Mutai',
-            icon: 'authority',
-            user: { name: 'Dr. James Kiprotich Mutai', email: 'dg@tvetauthority.go.ke', role: 'ceo', initials: 'JM' },
+            id: 'ps-moe',
+            label: 'Principal Secretary, Education',
+            icon: 'ministry',
+            user: { name: 'Dr. Belio Kipsang', email: 'ps@education.go.ke', role: 'ministry_head', initials: 'BK' },
           },
           {
-            id: 'auditor',
-            label: 'Mr. Joseph Mwangi Gicheru',
+            id: 'tvet-authority',
+            label: 'TVET Authority',
             icon: 'authority',
-            user: { name: 'Mr. Joseph Mwangi Gicheru', email: 'auditor@tvetauthority.go.ke', role: 'viewer', initials: 'JG' },
-          },
-          {
-            id: 'tonp',
-            label: 'The Ollessos National Polytechnic',
-            icon: 'institution',
             children: [
               {
-                id: 'tonp-principal',
-                label: 'Dr. Grace Wanjiku Njoroge',
+                id: 'admin',
+                label: 'System Administrator',
+                icon: 'authority',
+                user: { name: 'System Administrator', email: 'admin@tvetauthority.go.ke', role: 'super_admin', initials: 'SA' },
+              },
+              {
+                id: 'dg',
+                label: 'Dr. James Kiprotich Mutai',
+                icon: 'authority',
+                user: { name: 'Dr. James Kiprotich Mutai', email: 'dg@tvetauthority.go.ke', role: 'ceo', initials: 'JM' },
+              },
+              {
+                id: 'auditor',
+                label: 'Mr. Joseph Mwangi Gicheru',
+                icon: 'authority',
+                user: { name: 'Mr. Joseph Mwangi Gicheru', email: 'auditor@tvetauthority.go.ke', role: 'viewer', initials: 'JG' },
+              },
+              {
+                id: 'tonp',
+                label: 'The Ollessos National Polytechnic',
                 icon: 'institution',
-                user: { name: 'Dr. Grace Wanjiku Njoroge', email: 'principal@tonp.ac.ke', role: 'ministry_head', initials: 'GN' },
-              },
-              {
-                id: 'tonp-eng',
-                label: 'School of Engineering & Technology',
-                icon: 'school',
                 children: [
-                  { id: 'hod-eng-tonp', label: 'Eng. Peter Kamau Njeru', icon: 'department', user: { name: 'Eng. Peter Kamau Njeru', email: 'hod.engineering@tonp.ac.ke', role: 'department_head', initials: 'PN' } },
+                  {
+                    id: 'tonp-principal',
+                    label: 'Dr. Grace Wanjiku Njoroge',
+                    icon: 'institution',
+                    user: { name: 'Dr. Grace Wanjiku Njoroge', email: 'principal@tonp.ac.ke', role: 'ministry_head', initials: 'GN' },
+                  },
+                  {
+                    id: 'tonp-eng',
+                    label: 'School of Engineering & Technology',
+                    icon: 'school',
+                    children: [
+                      { id: 'hod-eng-tonp', label: 'Eng. Peter Kamau Njeru', icon: 'department', user: { name: 'Eng. Peter Kamau Njeru', email: 'hod.engineering@tonp.ac.ke', role: 'department_head', initials: 'PN' } },
+                    ],
+                  },
+                  {
+                    id: 'tonp-bus',
+                    label: 'School of Business & Management',
+                    icon: 'school',
+                    children: [
+                      { id: 'hod-bus-tonp', label: 'Ms. Faith Akinyi Odhiambo', icon: 'department', user: { name: 'Ms. Faith Akinyi Odhiambo', email: 'hod.business@tonp.ac.ke', role: 'department_head', initials: 'FO' } },
+                    ],
+                  },
+                  {
+                    id: 'tonp-ict',
+                    label: 'School of ICT & Computing',
+                    icon: 'school',
+                    children: [
+                      { id: 'hod-ict-tonp', label: 'Mr. Brian Kipchoge Rono', icon: 'department', user: { name: 'Mr. Brian Kipchoge Rono', email: 'hod.ict@tonp.ac.ke', role: 'department_head', initials: 'BR' } },
+                    ],
+                  },
+                  {
+                    id: 'tonp-sci',
+                    label: 'School of Applied Sciences & Health',
+                    icon: 'school',
+                    children: [
+                      { id: 'hod-sci-tonp', label: 'Dr. Lydia Muthoni Kariuki', icon: 'department', user: { name: 'Dr. Lydia Muthoni Kariuki', email: 'hod.sciences@tonp.ac.ke', role: 'department_head', initials: 'LK' } },
+                    ],
+                  },
                 ],
               },
               {
-                id: 'tonp-bus',
-                label: 'School of Business & Management',
-                icon: 'school',
-                children: [
-                  { id: 'hod-bus-tonp', label: 'Ms. Faith Akinyi Odhiambo', icon: 'department', user: { name: 'Ms. Faith Akinyi Odhiambo', email: 'hod.business@tonp.ac.ke', role: 'department_head', initials: 'FO' } },
-                ],
-              },
-              {
-                id: 'tonp-ict',
-                label: 'School of ICT & Computing',
-                icon: 'school',
-                children: [
-                  { id: 'hod-ict-tonp', label: 'Mr. Brian Kipchoge Rono', icon: 'department', user: { name: 'Mr. Brian Kipchoge Rono', email: 'hod.ict@tonp.ac.ke', role: 'department_head', initials: 'BR' } },
-                ],
-              },
-              {
-                id: 'tonp-sci',
-                label: 'School of Applied Sciences & Health',
-                icon: 'school',
-                children: [
-                  { id: 'hod-sci-tonp', label: 'Dr. Lydia Muthoni Kariuki', icon: 'department', user: { name: 'Dr. Lydia Muthoni Kariuki', email: 'hod.sciences@tonp.ac.ke', role: 'department_head', initials: 'LK' } },
-                ],
-              },
-            ],
-          },
-          {
-            id: 'kibt',
-            label: 'Kenya Institute of Business Training',
-            icon: 'institution',
-            children: [
-              {
-                id: 'kibt-principal',
-                label: 'Mr. Samuel Omondi Otieno',
+                id: 'kibt',
+                label: 'Kenya Institute of Business Training',
                 icon: 'institution',
-                user: { name: 'Mr. Samuel Omondi Otieno', email: 'principal@kibt.ac.ke', role: 'ministry_head', initials: 'SO' },
-              },
-              {
-                id: 'kibt-bus',
-                label: 'School of Business Studies',
-                icon: 'school',
                 children: [
-                  { id: 'hod-bus-kibt', label: 'Ms. Alice Chepkemoi Koech', icon: 'department', user: { name: 'Ms. Alice Chepkemoi Koech', email: 'hod.engineering@kibt.ac.ke', role: 'department_head', initials: 'AK' } },
+                  {
+                    id: 'kibt-principal',
+                    label: 'Mr. Samuel Omondi Otieno',
+                    icon: 'institution',
+                    user: { name: 'Mr. Samuel Omondi Otieno', email: 'principal@kibt.ac.ke', role: 'ministry_head', initials: 'SO' },
+                  },
+                  {
+                    id: 'kibt-bus',
+                    label: 'School of Business Studies',
+                    icon: 'school',
+                    children: [
+                      { id: 'hod-bus-kibt', label: 'Ms. Alice Chepkemoi Koech', icon: 'department', user: { name: 'Ms. Alice Chepkemoi Koech', email: 'hod.engineering@kibt.ac.ke', role: 'department_head', initials: 'AK' } },
+                    ],
+                  },
+                  { id: 'kibt-sec', label: 'School of Secretarial & Office Mgmt', icon: 'school', children: [] },
                 ],
               },
-              { id: 'kibt-sec', label: 'School of Secretarial & Office Mgmt', icon: 'school', children: [] },
-            ],
-          },
-          {
-            id: 'rvist',
-            label: 'Rift Valley Institute of Science & Technology',
-            icon: 'institution',
-            children: [
               {
-                id: 'rvist-principal',
-                label: 'Mrs. Beatrice Cherop Sang',
+                id: 'rvist',
+                label: 'Rift Valley Institute of Science & Technology',
                 icon: 'institution',
-                user: { name: 'Mrs. Beatrice Cherop Sang', email: 'principal@rvist.ac.ke', role: 'ministry_head', initials: 'BS' },
-              },
-              { id: 'rvist-eng', label: 'School of Engineering', icon: 'school', children: [] },
-              {
-                id: 'rvist-com',
-                label: 'School of Commerce & Business',
-                icon: 'school',
                 children: [
-                  { id: 'hod-com-rvist', label: 'Mr. Dennis Otieno Ochieng', icon: 'department', user: { name: 'Mr. Dennis Otieno Ochieng', email: 'hod.commerce@rvist.ac.ke', role: 'department_head', initials: 'DO' } },
+                  {
+                    id: 'rvist-principal',
+                    label: 'Mrs. Beatrice Cherop Sang',
+                    icon: 'institution',
+                    user: { name: 'Mrs. Beatrice Cherop Sang', email: 'principal@rvist.ac.ke', role: 'ministry_head', initials: 'BS' },
+                  },
+                  { id: 'rvist-eng', label: 'School of Engineering', icon: 'school', children: [] },
+                  {
+                    id: 'rvist-com',
+                    label: 'School of Commerce & Business',
+                    icon: 'school',
+                    children: [
+                      { id: 'hod-com-rvist', label: 'Mr. Dennis Otieno Ochieng', icon: 'department', user: { name: 'Mr. Dennis Otieno Ochieng', email: 'hod.commerce@rvist.ac.ke', role: 'department_head', initials: 'DO' } },
+                    ],
+                  },
                 ],
               },
             ],
@@ -171,6 +196,7 @@ const ORG_TREE: OrgNode[] = [
 ];
 
 const NODE_ICONS: Record<OrgNode['icon'], typeof Building2> = {
+  govt:        Globe,
   ministry:    Landmark,
   authority:   Shield,
   institution: Building2,
@@ -257,11 +283,19 @@ function TreeNode({
 
         <div
           className="w-6 h-6 rounded-md shrink-0 flex items-center justify-center"
-          style={{ background: depth === 0 ? 'rgba(99,102,241,0.15)' : depth === 1 ? 'rgba(59,130,246,0.12)' : 'rgba(52,211,153,0.1)' }}
+          style={{
+            background: node.icon === 'govt' ? 'rgba(234,179,8,0.15)' :
+                        depth === 0 ? 'rgba(99,102,241,0.15)' :
+                        depth === 1 ? 'rgba(59,130,246,0.12)' : 'rgba(52,211,153,0.1)',
+          }}
         >
           <Icon
             size={12}
-            style={{ color: depth === 0 ? '#818cf8' : depth === 1 ? '#60a5fa' : '#34d399' }}
+            style={{
+              color: node.icon === 'govt' ? '#eab308' :
+                     depth === 0 ? '#818cf8' :
+                     depth === 1 ? '#60a5fa' : '#34d399',
+            }}
           />
         </div>
 
@@ -309,8 +343,8 @@ function Orb({ x, y, size, color, delay }: { x: string; y: string; size: number;
 
 const FEATURES = [
   { icon: BarChart3,  title: 'Real-time Budget Tracking',   desc: 'Live utilization metrics across all institutions and departments.' },
-  { icon: GitBranch, title: 'Hierarchical Allocation',      desc: 'Multi-level budget flows from TVET Pool down to sub-departments.' },
-  { icon: Users,     title: 'Role-based Access Control',    desc: 'Scoped views for admins, principals, HODs, and auditors.' },
+  { icon: GitBranch, title: 'Hierarchical Allocation',      desc: 'Multi-level budget flows from National Government down to sub-departments.' },
+  { icon: Users,     title: 'Role-based Access Control',    desc: 'Scoped views — each level sees only downward, never upward.' },
   { icon: Zap,       title: 'Procurement & Catalog',        desc: 'Purchase orders linked to budget allocations in real time.' },
 ];
 
@@ -417,7 +451,7 @@ export default function LoginPage() {
 
         <div className="flex items-center gap-3">
           <div className="h-px flex-1 bg-white/10" />
-          <p className="text-white/20 text-xs tracking-wider">THE OLLESSOS NATIONAL POLYTECHNIC · FY 2024/25</p>
+          <p className="text-white/20 text-xs tracking-wider">REPUBLIC OF KENYA · FY 2024/25</p>
           <div className="h-px flex-1 bg-white/10" />
         </div>
       </motion.div>
@@ -491,16 +525,18 @@ export default function LoginPage() {
                 >
                   {/* Institution summary chips */}
                   {(() => {
-                    const CHIPS: { label: string; icon: OrgNode['icon']; accounts: number; indent?: boolean }[] = [
-                      { label: 'Ministry of Education',                       icon: 'ministry',     accounts: 1 },
-                      { label: 'TVET Authority',                              icon: 'authority',    accounts: 3, indent: true },
-                      { label: 'The Ollessos National Polytechnic',           icon: 'institution',  accounts: 5, indent: true },
-                      { label: 'Kenya Institute of Business Training',        icon: 'institution',  accounts: 2, indent: true },
-                      { label: 'Rift Valley Institute of Science & Technology', icon: 'institution', accounts: 2, indent: true },
+                    const CHIPS: { label: string; icon: OrgNode['icon']; accounts: number; indent?: boolean; indentLevel?: number }[] = [
+                      { label: 'National Government',                              icon: 'govt',        accounts: 2 },
+                      { label: 'Ministry of Education',                            icon: 'ministry',    accounts: 2, indent: true, indentLevel: 1 },
+                      { label: 'TVET Authority',                                   icon: 'authority',   accounts: 3, indent: true, indentLevel: 2 },
+                      { label: 'The Ollessos National Polytechnic',                icon: 'institution', accounts: 5, indent: true, indentLevel: 3 },
+                      { label: 'Kenya Institute of Business Training',             icon: 'institution', accounts: 2, indent: true, indentLevel: 3 },
+                      { label: 'Rift Valley Institute of Science & Technology',    icon: 'institution', accounts: 2, indent: true, indentLevel: 3 },
                     ];
                     const ICON_STYLE: Record<OrgNode['icon'], { bg: string; color: string; rowBg: string; rowBorder: string }> = {
+                      govt:        { bg: 'rgba(234,179,8,0.2)',   color: '#eab308', rowBg: 'rgba(234,179,8,0.06)',   rowBorder: 'rgba(234,179,8,0.2)'   },
                       ministry:    { bg: 'rgba(139,92,246,0.2)',  color: '#a78bfa', rowBg: 'rgba(139,92,246,0.06)', rowBorder: 'rgba(139,92,246,0.18)' },
-                      authority:   { bg: 'rgba(99,102,241,0.2)', color: '#818cf8', rowBg: 'rgba(99,102,241,0.06)', rowBorder: 'rgba(99,102,241,0.14)' },
+                      authority:   { bg: 'rgba(99,102,241,0.2)',  color: '#818cf8', rowBg: 'rgba(99,102,241,0.06)', rowBorder: 'rgba(99,102,241,0.14)' },
                       institution: { bg: 'rgba(59,130,246,0.15)', color: '#60a5fa', rowBg: 'rgba(59,130,246,0.05)', rowBorder: 'rgba(59,130,246,0.12)' },
                       school:      { bg: 'rgba(52,211,153,0.15)', color: '#34d399', rowBg: 'rgba(52,211,153,0.05)', rowBorder: 'rgba(52,211,153,0.12)' },
                       department:  { bg: 'rgba(148,163,184,0.1)', color: '#94a3b8', rowBg: 'rgba(148,163,184,0.04)', rowBorder: 'rgba(148,163,184,0.1)' },
@@ -510,11 +546,12 @@ export default function LoginPage() {
                         {CHIPS.map(chip => {
                           const Icon = NODE_ICONS[chip.icon];
                           const s = ICON_STYLE[chip.icon];
+                          const ml = (chip.indentLevel ?? 0) * 10;
                           return (
                             <div
                               key={chip.label}
                               className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg"
-                              style={{ marginLeft: chip.indent ? 12 : 0, background: s.rowBg, border: `1px solid ${s.rowBorder}` }}
+                              style={{ marginLeft: ml, background: s.rowBg, border: `1px solid ${s.rowBorder}` }}
                             >
                               {chip.indent && <div className="w-px h-3 bg-white/10 shrink-0" />}
                               <div className="w-5 h-5 rounded-md shrink-0 flex items-center justify-center" style={{ background: s.bg }}>
@@ -530,7 +567,7 @@ export default function LoginPage() {
                   })()}
 
                   <p className="text-white/30 text-[11px] mb-4 text-center">
-                    Browse the institution hierarchy and click any account to sign in instantly.
+                    Browse the hierarchy and click any account to sign in. Each level sees only downward.
                   </p>
 
                   {/* Error */}
@@ -573,88 +610,77 @@ export default function LoginPage() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.22 }}
-                  className="p-8 space-y-6"
+                  className="p-6 space-y-5"
                 >
-                  <div className="space-y-1">
-                    <h2 className="text-xl font-bold text-white">Welcome back</h2>
-                    <p className="text-white/40 text-sm">Sign in with your credentials</p>
+                  <div className="text-center">
+                    <h2 className="text-white font-bold text-lg">Sign In</h2>
+                    <p className="text-white/30 text-xs mt-1">Enter your credentials to access the portal</p>
                   </div>
 
-                  <AnimatePresence>
-                    {loginMutation.isError && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -8, scale: 0.97 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.97 }}
-                        className="flex items-start gap-3 px-4 py-3 rounded-xl border border-rose-500/30 bg-rose-500/10"
-                      >
-                        <AlertTriangle size={15} className="text-rose-400 shrink-0 mt-0.5" />
-                        <p className="text-rose-400 text-sm">Invalid email or password. Please try again.</p>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  <form onSubmit={handleSubmit} className="space-y-5">
+                  <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-1.5">
-                      <Label htmlFor="email" className="text-white/50 text-xs uppercase tracking-wider font-semibold">Email Address</Label>
-                      <div className="relative group">
-                        <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/25 group-focus-within:text-blue-400 transition-colors" />
+                      <Label htmlFor="email" className="text-white/50 text-xs font-semibold uppercase tracking-wider">Email Address</Label>
+                      <div className="relative">
+                        <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25" />
                         <Input
                           id="email"
                           type="email"
-                          autoComplete="email"
-                          placeholder="user@tvetauthority.go.ke"
                           value={email}
-                          onChange={(e) => setEmail(e.target.value)}
+                          onChange={e => setEmail(e.target.value)}
+                          placeholder="you@agency.go.ke"
+                          className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-blue-500/50 focus:ring-blue-500/20"
                           required
-                          className="pl-10 h-11 text-sm text-white placeholder:text-white/20 rounded-xl transition-all"
-                          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
                         />
                       </div>
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label htmlFor="password" className="text-white/50 text-xs uppercase tracking-wider font-semibold">Password</Label>
-                      <div className="relative group">
-                        <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/25 group-focus-within:text-blue-400 transition-colors" />
+                      <Label htmlFor="password" className="text-white/50 text-xs font-semibold uppercase tracking-wider">Password</Label>
+                      <div className="relative">
+                        <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25" />
                         <Input
                           id="password"
                           type={showPw ? 'text' : 'password'}
-                          autoComplete="current-password"
-                          placeholder="••••••••••••"
                           value={password}
-                          onChange={(e) => setPassword(e.target.value)}
+                          onChange={e => setPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="pl-9 pr-10 bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-blue-500/50 focus:ring-blue-500/20"
                           required
-                          className="pl-10 pr-11 h-11 text-sm text-white placeholder:text-white/20 rounded-xl transition-all"
-                          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
                         />
                         <button
                           type="button"
-                          onClick={() => setShowPw((p) => !p)}
-                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/60 transition-colors"
-                          tabIndex={-1}
+                          onClick={() => setShowPw(p => !p)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/60 transition-colors"
                         >
-                          {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                          {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
                         </button>
                       </div>
                     </div>
 
+                    <AnimatePresence>
+                      {loginMutation.isError && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
+                          className="flex items-center gap-2 px-3 py-2 rounded-lg border border-rose-500/30 bg-rose-500/10"
+                        >
+                          <AlertTriangle size={13} className="text-rose-400 shrink-0" />
+                          <p className="text-rose-400 text-xs">Invalid credentials. Please try again.</p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
                     <motion.button
                       type="submit"
                       disabled={loginMutation.isPending}
-                      whileHover={{ scale: 1.015 }}
-                      whileTap={{ scale: 0.985 }}
-                      className="w-full h-11 rounded-xl font-semibold text-sm text-white relative overflow-hidden transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
-                      style={{ background: 'linear-gradient(135deg,#2563eb,#4f46e5)', boxShadow: '0 4px 24px rgba(59,130,246,0.35)' }}
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-60"
+                      style={{ background: 'linear-gradient(135deg,#3b82f6,#6366f1)', boxShadow: '0 4px 20px rgba(59,130,246,0.3)' }}
+                      whileHover={{ scale: 1.02, boxShadow: '0 8px 28px rgba(59,130,246,0.4)' }}
+                      whileTap={{ scale: 0.98 }}
                     >
-                      {loginMutation.isPending ? (
-                        <LoadingSpinner size={18} className="p-0 text-white" />
-                      ) : (
-                        <span className="flex items-center justify-center gap-2">
-                          <Shield size={15} />
-                          Sign In Securely
-                        </span>
-                      )}
+                      {loginMutation.isPending ? <LoadingSpinner size={16} className="p-0" /> : <LogIn size={16} />}
+                      {loginMutation.isPending ? 'Signing in…' : 'Sign In'}
                     </motion.button>
                   </form>
                 </motion.div>
@@ -662,11 +688,6 @@ export default function LoginPage() {
 
             </AnimatePresence>
           </div>
-
-          <p className="text-center text-white/15 text-xs flex items-center justify-center gap-2">
-            <Shield size={11} />
-            Protected system. Authorized access only.
-          </p>
         </div>
       </motion.div>
     </div>

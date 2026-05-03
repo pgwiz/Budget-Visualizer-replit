@@ -17,11 +17,12 @@ export async function getSubtreeIds(rootId: number): Promise<number[]> {
 
 /**
  * Returns the effective scope sector ID for a user.
- * super_admin and ceo roles get global scope (null = entire national pool).
- * Everyone else is scoped to their own sector subtree.
+ * Only super_admin gets the true global scope (null = entire national pool).
+ * All other roles (including ceo) are scoped to their own sector subtree.
+ * Users without a sectorId assigned fall back to global gracefully.
  */
 export function getUserScopeId(user: { role: string; sectorId: number | null }): number | null {
-  if (!user.sectorId || ['super_admin', 'ceo'].includes(user.role)) return null;
+  if (user.role === 'super_admin') return null;
   return user.sectorId;
 }
 
@@ -60,9 +61,16 @@ export async function getNetAllocated(sectorId: number, cycleId: number): Promis
 }
 
 export async function getTotalAllocatedFrom(sectorId: number | null, cycleId: number): Promise<number> {
-  const whereClause = sectorId === null
-    ? and(eq(allocationsTable.budgetCycleId, cycleId), sql`${allocationsTable.fromSectorId} IS NULL`, inArray(allocationsTable.status, ["active", "pending", "exhausted"]))
-    : and(eq(allocationsTable.fromSectorId, sectorId), eq(allocationsTable.budgetCycleId, cycleId), inArray(allocationsTable.status, ["active", "pending", "exhausted"]));
+  let whereClause;
+  if (sectorId === null) {
+    // "From root" = allocations originating from top-level sectors (parentId IS NULL)
+    const roots = await db.select({ id: sectorsTable.id }).from(sectorsTable).where(sql`${sectorsTable.parentId} IS NULL`);
+    const rootIds = roots.map(r => r.id);
+    if (rootIds.length === 0) return 0;
+    whereClause = and(eq(allocationsTable.budgetCycleId, cycleId), inArray(allocationsTable.fromSectorId, rootIds), inArray(allocationsTable.status, ["active", "pending", "exhausted"]));
+  } else {
+    whereClause = and(eq(allocationsTable.fromSectorId, sectorId), eq(allocationsTable.budgetCycleId, cycleId), inArray(allocationsTable.status, ["active", "pending", "exhausted"]));
+  }
   const result = await db
     .select({ total: sql<string>`COALESCE(SUM(amount), 0)` })
     .from(allocationsTable)
