@@ -11,6 +11,7 @@ export const sectorsTable = pgTable("sectors", {
   responsibleUserId: integer("responsible_user_id"),
   isActive: boolean("is_active").notNull().default(true),
   sortOrder: integer("sort_order").notNull().default(0),
+  moderationDown: boolean("moderation_down").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

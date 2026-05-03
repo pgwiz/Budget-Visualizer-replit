@@ -9,6 +9,7 @@ import dashboardRouter from "./dashboard";
 import reportsRouter from "./reports";
 import productsRouter from "./products";
 import purchaseOrdersRouter from "./purchase-orders";
+import sectorControlsRouter from "./sector-controls";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(dashboardRouter);
 router.use(reportsRouter);
 router.use(productsRouter);
 router.use(purchaseOrdersRouter);
+router.use(sectorControlsRouter);
 
 export default router;

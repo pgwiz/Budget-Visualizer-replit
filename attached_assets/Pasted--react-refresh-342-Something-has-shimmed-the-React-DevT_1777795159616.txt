@@ -1,0 +1,61 @@
+@react-refresh:342 Something has shimmed the React DevTools global hook (__REACT_DEVTOOLS_GLOBAL_HOOK__). Fast Refresh is not compatible with this shim and will be disabled.
+(anonymous) @ @react-refresh:342
+react-dom_client.js?v=3568489e:2160 In HTML, <a> cannot be a descendant of <a>.
+This will cause a hydration error.
+
+  ...
+    <TooltipProviderProvider scope={undefined} isOpenDelayedRef={{current:true}} delayDuration={700} onOpen={function} ...>
+      <AuthGuard data-replit-metadata="artifacts/..." data-component-name="AuthGuard">
+        <Routes data-replit-metadata="artifacts/..." data-component-name="Routes">
+          <Switch data-replit-metadata="artifacts/..." data-component-name="Switch">
+            <Route data-replit-metadata="artifacts/..." data-component-name="Route" path="/" match={[...]}>
+              <ProtectedRoute data-replit-metadata="artifacts/..." data-component-name="ProtectedR..." ...>
+                <AppLayout data-replit-metadata="artifacts/..." data-component-name="AppLayout">
+                  <div data-replit-metadata="artifacts/..." data-component-name="div" className="flex min-h...">
+                    <Sidebar data-replit-metadata="artifacts/..." data-component-name="Sidebar">
+                      <aside data-replit-metadata="artifacts/..." data-component-name="aside" className="w-60 flex ..." ...>
+                        <div>
+                        <div>
+                        <nav data-replit-metadata="artifacts/..." data-component-name="nav" className="flex-1 ove...">
+                          <SectionLabel>
+                          <NavItem data-replit-metadata="artifacts/..." data-component-name="NavItem" href="/" ...>
+>                           <a
+>                             data-replit-metadata="artifacts/budget-monitor/src/components/layout/Sidebar.tsx:22:4"
+>                             data-component-name="Link"
+>                             onClick={function}
+>                             href="/"
+>                             className={undefined}
+>                             ref={null}
+>                           >
+>                             <a
+>                               data-replit-metadata="artifacts/budget-monitor/src/components/layout/Sidebar.tsx:23:6"
+>                               data-component-name="a"
+>                               className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 ..."
+>                             >
+                          ...
+                        ...
+                    ...
+      ...
+
+validateDOMNesting @ react-dom_client.js?v=3568489e:2160
+react-dom_client.js?v=3568489e:2167 <a> cannot contain a nested <a>.
+See this log for the ancestor stack trace.
+(anonymous) @ react-dom_client.js?v=3568489e:2167
+framer-motion.js?v=3568489e:5735 Error: <ellipse> attribute rx: Expected length, "undefined".
+renderSVG @ framer-motion.js?v=3568489e:5735
+framer-motion.js?v=3568489e:5735 Error: <ellipse> attribute ry: Expected length, "undefined".
+renderSVG @ framer-motion.js?v=3568489e:5735
+framer-motion.js?v=3568489e:5735 Error: <ellipse> attribute rx: Expected length, "undefined".
+renderSVG @ framer-motion.js?v=3568489e:5735
+framer-motion.js?v=3568489e:5735 Error: <ellipse> attribute ry: Expected length, "undefined".
+renderSVG @ framer-motion.js?v=3568489e:5735
+api/auth/me:1  Failed to load resource: the server responded with a status of 401 (Unauthorized)
+api/auth/me:1  Failed to load resource: the server responded with a status of 401 (Unauthorized)
+framer-motion.js?v=3568489e:5735 Error: <ellipse> attribute rx: Expected length, "undefined".
+renderSVG @ framer-motion.js?v=3568489e:5735
+framer-motion.js?v=3568489e:5735 Error: <ellipse> attribute ry: Expected length, "undefined".
+renderSVG @ framer-motion.js?v=3568489e:5735
+framer-motion.js?v=3568489e:5735 Error: <ellipse> attribute rx: Expected length, "undefined".
+renderSVG @ framer-motion.js?v=3568489e:5735
+framer-motion.js?v=3568489e:5735 Error: <ellipse> attribute ry: Expected length, "undefined".
+renderSVG @ framer-motion.js?v=3568489e:5735
