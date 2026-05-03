@@ -9,7 +9,7 @@ import {
 import { AnimatedStatCard } from '@/components/ui/AnimatedStatCard';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { formatCurrency } from '@/lib/api';
+import { formatCurrency, formatCompact } from '@/lib/api';
 import { Wallet, TrendingUp, Activity, Calendar, BarChart3, ArrowUpRight } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -104,23 +104,28 @@ export default function DashboardPage() {
         <AnimatedStatCard
           index={0} icon={Wallet} label="Total Budget" color="primary"
           rawValue={summary?.totalBudget ?? 0}
-          formatFn={(v) => formatCurrency(v)}
+          formatFn={formatCompact}
+          sub={formatCurrency(summary?.totalBudget ?? 0)}
         />
         <AnimatedStatCard
           index={1} icon={TrendingUp} label="Total Allocated" color="success"
           rawValue={summary?.totalAllocated ?? 0}
-          formatFn={(v) => formatCurrency(v)}
+          formatFn={formatCompact}
+          sub={formatCurrency(summary?.totalAllocated ?? 0)}
         />
         <AnimatedStatCard
-          index={2} icon={Wallet} label="Available Balance" color="warning"
+          index={2} icon={Wallet} label="Available Balance"
+          color={(summary?.availableBalance ?? 0) < 0 ? 'danger' : 'warning'}
           rawValue={summary?.availableBalance ?? 0}
-          formatFn={(v) => formatCurrency(v)}
+          formatFn={formatCompact}
+          sub={formatCurrency(summary?.availableBalance ?? 0)}
         />
         <AnimatedStatCard
-          index={3} icon={BarChart3} label="Utilization" color={utilizationPct > 90 ? 'danger' : utilizationPct > 70 ? 'warning' : 'primary'}
+          index={3} icon={BarChart3} label="Utilization"
+          color={utilizationPct > 90 ? 'danger' : utilizationPct > 70 ? 'warning' : 'primary'}
           rawValue={utilizationPct}
           formatFn={(v) => `${Math.round(v)}%`}
-          sub={`${summary?.activeAllocations ?? 0} active allocations`}
+          sub={`${summary?.activeAllocations ?? 0} active allocation${(summary?.activeAllocations ?? 0) !== 1 ? 's' : ''}`}
         />
       </div>
 

@@ -10,7 +10,7 @@ import { AnimatedStatCard } from '@/components/ui/AnimatedStatCard';
 import { UtilizationRing } from '@/components/hierarchy/UtilizationRing';
 import { NodeDetailPanel } from '@/components/hierarchy/NodeDetailPanel';
 import { BudgetHierarchyTree } from '@/components/hierarchy/BudgetHierarchyTree';
-import { formatCurrency } from '@/lib/api';
+import { formatCurrency, formatCompact } from '@/lib/api';
 import {
   Wallet, TrendingUp, ChevronLeft, ArrowDownRight, ArrowUpRight,
   BarChart3, GitBranch, Network, LayoutList,
@@ -145,10 +145,16 @@ export default function SectorDetailPage({ id }: { id: string }) {
 
       {/* ── KPI cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <AnimatedStatCard index={0} icon={Wallet}    label="Total Received"   color="primary"  rawValue={allocated}  formatFn={formatCurrency} />
-        <AnimatedStatCard index={1} icon={TrendingUp} label="Distributed Out" color="success"  rawValue={sector.totalAllocated ?? 0} formatFn={formatCurrency} />
-        <AnimatedStatCard index={2} icon={Wallet}    label="Available"        color="warning"  rawValue={available}  formatFn={formatCurrency} />
-        <AnimatedStatCard index={3} icon={BarChart3} label="Utilization"      color={pct > 90 ? 'danger' : pct > 70 ? 'warning' : 'primary'} rawValue={pct} formatFn={(v) => `${Math.round(v)}%`} />
+        <AnimatedStatCard index={0} icon={Wallet}     label="Total Received"  color="primary"
+          rawValue={allocated}  formatFn={formatCompact} sub={formatCurrency(allocated)} />
+        <AnimatedStatCard index={1} icon={TrendingUp} label="Distributed Out" color="success"
+          rawValue={sector.totalAllocated ?? 0} formatFn={formatCompact} sub={formatCurrency(sector.totalAllocated ?? 0)} />
+        <AnimatedStatCard index={2} icon={Wallet}     label="Available"
+          color={available < 0 ? 'danger' : 'warning'}
+          rawValue={available} formatFn={formatCompact} sub={formatCurrency(available)} />
+        <AnimatedStatCard index={3} icon={BarChart3}  label="Utilization"
+          color={pct > 90 ? 'danger' : pct > 70 ? 'warning' : 'primary'}
+          rawValue={pct} formatFn={(v) => `${Math.round(v)}%`} />
       </div>
 
       {/* ── Budget split + timeline ── */}
