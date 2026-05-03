@@ -19,16 +19,17 @@ const ROLE_META: Record<string, { label: string; color: string; bg: string; bord
 
 function NavItem({ href, label, icon: Icon, active }: { href: string; label: string; icon: React.ElementType; active: boolean }) {
   return (
-    <Link href={href}>
-      <a className={cn(
+    <Link
+      href={href}
+      className={cn(
         'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 group text-sm',
         active
           ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
           : 'text-white/55 hover:text-white hover:bg-white/5 border border-transparent',
-      )}>
-        <Icon size={17} className={cn('shrink-0 transition-colors', active ? 'text-blue-400' : 'text-white/35 group-hover:text-white/60')} />
-        <span className="font-medium leading-none">{label}</span>
-      </a>
+      )}
+    >
+      <Icon size={17} className={cn('shrink-0 transition-colors', active ? 'text-blue-400' : 'text-white/35 group-hover:text-white/60')} />
+      <span className="font-medium leading-none">{label}</span>
     </Link>
   );
 }

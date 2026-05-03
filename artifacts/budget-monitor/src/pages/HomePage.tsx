@@ -144,23 +144,27 @@ function MemphisIllustration() {
         </linearGradient>
       </defs>
 
-      {/* Background blobs */}
-      <motion.ellipse cx={160} cy={140} rx={130} ry={100}
-        fill="url(#blob1)"
-        animate={{ rx:[130,145,130], ry:[100,110,100] }}
+      {/* Background blobs — use motion.g + scale to avoid rx/ry WAAPI issues */}
+      <motion.g
+        animate={{ scale:[1, 1.1, 1] }}
         transition={{ duration:6, repeat:Infinity, ease:'easeInOut' }}
-      />
-      <motion.ellipse cx={220} cy={190} rx={70} ry={55}
-        fill="url(#blob2)"
-        animate={{ rx:[70,80,70], ry:[55,65,55] }}
+        style={{ transformOrigin:'160px 140px' }}
+      >
+        <ellipse cx={160} cy={140} rx={130} ry={100} fill="url(#blob1)" />
+      </motion.g>
+      <motion.g
+        animate={{ scale:[1, 1.12, 1] }}
         transition={{ duration:5, delay:1, repeat:Infinity, ease:'easeInOut' }}
-      />
+        style={{ transformOrigin:'220px 190px' }}
+      >
+        <ellipse cx={220} cy={190} rx={70} ry={55} fill="url(#blob2)" />
+      </motion.g>
 
       {/* === FIGURE LEFT: person analyzing chart === */}
       {/* Body */}
-      <motion.ellipse cx={78} cy={195} rx={28} ry={40} fill="#f59e0b"
-        initial={{y:8, opacity:0}} animate={{y:0, opacity:1}} transition={{delay:0.3, duration:0.6}}
-      />
+      <motion.g initial={{y:8, opacity:0}} animate={{y:0, opacity:1}} transition={{delay:0.3, duration:0.6}}>
+        <ellipse cx={78} cy={195} rx={28} ry={40} fill="#f59e0b" />
+      </motion.g>
       {/* Head */}
       <motion.circle cx={78} cy={148} r={22} fill="#fde68a"
         initial={{y:8, opacity:0}} animate={{y:0, opacity:1}} transition={{delay:0.2, duration:0.6}}
@@ -210,9 +214,9 @@ function MemphisIllustration() {
 
       {/* === FIGURE RIGHT: person on laptop === */}
       {/* Body */}
-      <motion.ellipse cx={252} cy={195} rx={26} ry={38} fill="#6366f1"
-        initial={{y:8, opacity:0}} animate={{y:0, opacity:1}} transition={{delay:0.4, duration:0.6}}
-      />
+      <motion.g initial={{y:8, opacity:0}} animate={{y:0, opacity:1}} transition={{delay:0.4, duration:0.6}}>
+        <ellipse cx={252} cy={195} rx={26} ry={38} fill="#6366f1" />
+      </motion.g>
       {/* Head */}
       <motion.circle cx={252} cy={150} r={20} fill="#c7d2fe"
         initial={{y:8, opacity:0}} animate={{y:0, opacity:1}} transition={{delay:0.3, duration:0.6}}
