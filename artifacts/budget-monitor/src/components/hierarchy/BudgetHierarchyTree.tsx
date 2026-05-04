@@ -488,7 +488,7 @@ export function BudgetHierarchyTree({
   }, []);
 
   const handleSelect = useCallback((node: SectorTreeNode) => {
-    setSelectedNode((prev) => (prev?.id === node.id ? null : node));
+    setSelectedNode((prev: SectorTreeNode | null) => (prev?.id === node.id ? null : node));
   }, []);
 
   const handleFocus = useCallback((node: SectorTreeNode) => {

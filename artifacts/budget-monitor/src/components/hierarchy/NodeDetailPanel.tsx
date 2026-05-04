@@ -175,7 +175,7 @@ export function NodeDetailPanel({ node, onClose }: NodeDetailPanelProps) {
                 <Section title="Sub-Sector Comparison">
                   <ResponsiveContainer width="100%" height={160}>
                     <BarChart
-                      data={node.children.slice(0, 6).map((c) => ({
+                      data={node.children.slice(0, 6).map((c: SectorTreeNode) => ({
                         name: c.code,
                         fullName: c.name,
                         allocated: c.netAllocated,
@@ -214,7 +214,7 @@ export function NodeDetailPanel({ node, onClose }: NodeDetailPanelProps) {
 
                   {/* Child node pills */}
                   <div className="mt-4 space-y-2">
-                    {node.children.map((child) => (
+                    {node.children.map((child: SectorTreeNode) => (
                       <ChildPill key={child.id} child={child} />
                     ))}
                   </div>

@@ -51,7 +51,7 @@ function PopupContent({ node, onClose, onDesign }: { node: SectorTreeNode; onClo
 
   // Bar: child sectors comparison
   const children = node.children ?? [];
-  const barData = children.slice(0, 8).map((c) => ({
+  const barData = children.slice(0, 8).map((c: SectorTreeNode) => ({
     name: c.name.replace('Ministry of ', '').replace('Department of ', '').slice(0, 14),
     pct: Math.round(c.utilizationPct),
     allocated: Math.max(0, c.netAllocated),
@@ -201,7 +201,7 @@ function PopupContent({ node, onClose, onDesign }: { node: SectorTreeNode; onClo
                       formatter={(v: number) => [`${v}%`, 'Utilization']}
                     />
                     <Bar dataKey="pct" radius={[0, 4, 4, 0]} maxBarSize={14}>
-                      {barData.map((d, i) => (
+                      {barData.map((d: { name: string; pct: number; allocated: number }, i: number) => (
                         <Cell key={i} fill={d.pct >= 90 ? '#ef4444' : d.pct >= 70 ? '#f59e0b' : '#3b82f6'} />
                       ))}
                     </Bar>
@@ -220,7 +220,7 @@ function PopupContent({ node, onClose, onDesign }: { node: SectorTreeNode; onClo
             <div className="px-6 pb-4">
               <p className="text-[10px] uppercase tracking-widest text-white/30 font-bold mb-3">Sub-sectors</p>
               <div className="space-y-2">
-                {children.slice(0, 6).map((c) => (
+                {children.slice(0, 6).map((c: SectorTreeNode) => (
                   <div key={c.id} className="glass rounded-xl p-3 flex items-center gap-3">
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-white truncate">{c.name}</p>

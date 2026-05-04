@@ -6,7 +6,9 @@ import {
   useListSectors,
   useGetActiveCycle,
   getListAllocationsQueryKey,
-  getGetDashboardSummaryQueryKey
+  getGetDashboardSummaryQueryKey,
+  AllocationWithDetails,
+  SectorWithStats,
 } from '@workspace/api-client-react';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -46,7 +48,7 @@ export default function AllocationsPage() {
 
   // Filter to only show immediate children for allocation targets
   const userSectorId = user?.sectorId;
-  const allocableTargets = sectors?.filter(s => {
+  const allocableTargets = sectors?.filter((s: SectorWithStats) => {
     if (user?.role === 'super_admin') return true;
     if (!userSectorId) return true;
     return s.parent?.id === userSectorId;
@@ -98,7 +100,7 @@ export default function AllocationsPage() {
   };
 
   // Filter allocations
-  const filteredAllocations = (allocations ?? []).filter(item => {
+  const filteredAllocations = (allocations ?? []).filter((item: AllocationWithDetails) => {
     if (statusFilter !== 'all' && item.status !== statusFilter) return false;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -158,7 +160,7 @@ export default function AllocationsPage() {
                       <SelectValue placeholder="Select target sub-sector" />
                     </SelectTrigger>
                     <SelectContent className="glass border-white/10 text-white">
-                      {allocableTargets.map(s => (
+                      {allocableTargets.map((s: SectorWithStats) => (
                         <SelectItem key={s.id} value={s.id.toString()}>{s.name} ({s.code})</SelectItem>
                       ))}
                     </SelectContent>
@@ -237,7 +239,7 @@ export default function AllocationsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredAllocations.map((item) => (
+                filteredAllocations.map((item: AllocationWithDetails) => (
                   <TableRow key={item.id} className="hover:bg-white/5 border-white/5 transition-colors">
                     <TableCell className="text-white/40 font-mono text-xs">#{item.id}</TableCell>
                     <TableCell className="text-white font-medium">{item.fromSector?.name || 'System'}</TableCell>

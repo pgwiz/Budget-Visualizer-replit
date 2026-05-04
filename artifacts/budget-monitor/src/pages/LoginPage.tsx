@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLogin } from '@workspace/api-client-react';
 import { Input } from '@/components/ui/input';
@@ -8,28 +8,36 @@ import { useLocation } from 'wouter';
 import {
   Mail, Lock, Eye, EyeOff, Shield, BarChart3, GitBranch,
   Users, AlertTriangle, ChevronRight, Building2, School,
-  BookOpen, Zap, LogIn, Landmark, Globe,
+  BookOpen, Zap, LogIn, Landmark, Globe, Search, Filter,
+  ChevronDown,
 } from 'lucide-react';
 import { queryClient } from '@/lib/api';
 import { getGetMeQueryKey } from '@workspace/api-client-react';
 
-// ─── Org hierarchy data ───────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type Role = 'super_admin' | 'ceo' | 'ministry_head' | 'department_head' | 'viewer';
 
-interface OrgUser {
+interface DemoUser {
+  id: number;
   name: string;
   email: string;
   role: Role;
-  initials: string;
+  sectorId: number | null;
 }
 
-interface OrgNode {
-  id: string;
-  label: string;
-  icon: 'govt' | 'ministry' | 'authority' | 'institution' | 'school' | 'department';
-  user?: OrgUser;
-  children?: OrgNode[];
+interface DemoSector {
+  id: number;
+  name: string;
+  code: string;
+  parentId: number | null;
+  depth: number;
+}
+
+interface SectorNode {
+  sector: DemoSector;
+  users: DemoUser[];
+  children: SectorNode[];
 }
 
 const ROLE_META: Record<Role, { label: string; color: string; bg: string }> = {
@@ -40,289 +48,196 @@ const ROLE_META: Record<Role, { label: string; color: string; bg: string }> = {
   viewer:          { label: 'Auditor',    color: '#a78bfa', bg: 'rgba(167,139,250,0.12)' },
 };
 
-const ORG_TREE: OrgNode[] = [
-  {
-    id: 'national-govt',
-    label: 'National Government',
-    icon: 'govt',
-    children: [
-      {
-        id: 'nat-admin',
-        label: 'National Budget Controller',
-        icon: 'govt',
-        user: { name: 'National Budget Controller', email: 'admin.nat@treasury.go.ke', role: 'super_admin', initials: 'NB' },
-      },
-      {
-        id: 'cs-treasury',
-        label: 'Cabinet Secretary, National Treasury',
-        icon: 'govt',
-        user: { name: 'Prof. Njuguna Ndung\'u', email: 'cs.treasury@treasury.go.ke', role: 'ceo', initials: 'NN' },
-      },
-      {
-        id: 'moe',
-        label: 'Ministry of Education',
-        icon: 'ministry',
-        children: [
-          {
-            id: 'cs-moe',
-            label: 'Cabinet Secretary, Ministry of Education',
-            icon: 'ministry',
-            user: { name: 'Cabinet Secretary, Ministry of Education', email: 'ceo@budget.go.ke', role: 'ceo', initials: 'CS' },
-          },
-          {
-            id: 'ps-moe',
-            label: 'Principal Secretary, Education',
-            icon: 'ministry',
-            user: { name: 'Dr. Belio Kipsang', email: 'ps@education.go.ke', role: 'ministry_head', initials: 'BK' },
-          },
-          {
-            id: 'tvet-authority',
-            label: 'TVET Authority',
-            icon: 'authority',
-            children: [
-              {
-                id: 'admin',
-                label: 'System Administrator',
-                icon: 'authority',
-                user: { name: 'System Administrator', email: 'admin@tvetauthority.go.ke', role: 'super_admin', initials: 'SA' },
-              },
-              {
-                id: 'dg',
-                label: 'Dr. James Kiprotich Mutai',
-                icon: 'authority',
-                user: { name: 'Dr. James Kiprotich Mutai', email: 'dg@tvetauthority.go.ke', role: 'ceo', initials: 'JM' },
-              },
-              {
-                id: 'auditor',
-                label: 'Mr. Joseph Mwangi Gicheru',
-                icon: 'authority',
-                user: { name: 'Mr. Joseph Mwangi Gicheru', email: 'auditor@tvetauthority.go.ke', role: 'viewer', initials: 'JG' },
-              },
-              {
-                id: 'tonp',
-                label: 'The Ollessos National Polytechnic',
-                icon: 'institution',
-                children: [
-                  {
-                    id: 'tonp-principal',
-                    label: 'Dr. Grace Wanjiku Njoroge',
-                    icon: 'institution',
-                    user: { name: 'Dr. Grace Wanjiku Njoroge', email: 'principal@tonp.ac.ke', role: 'ministry_head', initials: 'GN' },
-                  },
-                  {
-                    id: 'tonp-eng',
-                    label: 'School of Engineering & Technology',
-                    icon: 'school',
-                    children: [
-                      { id: 'hod-eng-tonp', label: 'Eng. Peter Kamau Njeru', icon: 'department', user: { name: 'Eng. Peter Kamau Njeru', email: 'hod.engineering@tonp.ac.ke', role: 'department_head', initials: 'PN' } },
-                    ],
-                  },
-                  {
-                    id: 'tonp-bus',
-                    label: 'School of Business & Management',
-                    icon: 'school',
-                    children: [
-                      { id: 'hod-bus-tonp', label: 'Ms. Faith Akinyi Odhiambo', icon: 'department', user: { name: 'Ms. Faith Akinyi Odhiambo', email: 'hod.business@tonp.ac.ke', role: 'department_head', initials: 'FO' } },
-                    ],
-                  },
-                  {
-                    id: 'tonp-ict',
-                    label: 'School of ICT & Computing',
-                    icon: 'school',
-                    children: [
-                      { id: 'hod-ict-tonp', label: 'Mr. Brian Kipchoge Rono', icon: 'department', user: { name: 'Mr. Brian Kipchoge Rono', email: 'hod.ict@tonp.ac.ke', role: 'department_head', initials: 'BR' } },
-                    ],
-                  },
-                  {
-                    id: 'tonp-sci',
-                    label: 'School of Applied Sciences & Health',
-                    icon: 'school',
-                    children: [
-                      { id: 'hod-sci-tonp', label: 'Dr. Lydia Muthoni Kariuki', icon: 'department', user: { name: 'Dr. Lydia Muthoni Kariuki', email: 'hod.sciences@tonp.ac.ke', role: 'department_head', initials: 'LK' } },
-                    ],
-                  },
-                ],
-              },
-              {
-                id: 'kibt',
-                label: 'Kenya Institute of Business Training',
-                icon: 'institution',
-                children: [
-                  {
-                    id: 'kibt-principal',
-                    label: 'Mr. Samuel Omondi Otieno',
-                    icon: 'institution',
-                    user: { name: 'Mr. Samuel Omondi Otieno', email: 'principal@kibt.ac.ke', role: 'ministry_head', initials: 'SO' },
-                  },
-                  {
-                    id: 'kibt-bus',
-                    label: 'School of Business Studies',
-                    icon: 'school',
-                    children: [
-                      { id: 'hod-bus-kibt', label: 'Ms. Alice Chepkemoi Koech', icon: 'department', user: { name: 'Ms. Alice Chepkemoi Koech', email: 'hod.engineering@kibt.ac.ke', role: 'department_head', initials: 'AK' } },
-                    ],
-                  },
-                  { id: 'kibt-sec', label: 'School of Secretarial & Office Mgmt', icon: 'school', children: [] },
-                ],
-              },
-              {
-                id: 'rvist',
-                label: 'Rift Valley Institute of Science & Technology',
-                icon: 'institution',
-                children: [
-                  {
-                    id: 'rvist-principal',
-                    label: 'Mrs. Beatrice Cherop Sang',
-                    icon: 'institution',
-                    user: { name: 'Mrs. Beatrice Cherop Sang', email: 'principal@rvist.ac.ke', role: 'ministry_head', initials: 'BS' },
-                  },
-                  { id: 'rvist-eng', label: 'School of Engineering', icon: 'school', children: [] },
-                  {
-                    id: 'rvist-com',
-                    label: 'School of Commerce & Business',
-                    icon: 'school',
-                    children: [
-                      { id: 'hod-com-rvist', label: 'Mr. Dennis Otieno Ochieng', icon: 'department', user: { name: 'Mr. Dennis Otieno Ochieng', email: 'hod.commerce@rvist.ac.ke', role: 'department_head', initials: 'DO' } },
-                    ],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  },
-];
+function depthIcon(depth: number) {
+  if (depth === 0) return Globe;
+  if (depth === 1) return Landmark;
+  if (depth === 2) return Shield;
+  if (depth === 3) return Building2;
+  if (depth === 4) return School;
+  return BookOpen;
+}
 
-const NODE_ICONS: Record<OrgNode['icon'], typeof Building2> = {
-  govt:        Globe,
-  ministry:    Landmark,
-  authority:   Shield,
-  institution: Building2,
-  school:      School,
-  department:  BookOpen,
-};
+function depthStyle(depth: number) {
+  if (depth === 0) return { bg: 'rgba(234,179,8,0.15)',  color: '#eab308' };
+  if (depth === 1) return { bg: 'rgba(139,92,246,0.15)', color: '#a78bfa' };
+  if (depth === 2) return { bg: 'rgba(99,102,241,0.15)', color: '#818cf8' };
+  if (depth === 3) return { bg: 'rgba(59,130,246,0.12)', color: '#60a5fa' };
+  if (depth === 4) return { bg: 'rgba(52,211,153,0.12)', color: '#34d399' };
+  return { bg: 'rgba(148,163,184,0.1)', color: '#94a3b8' };
+}
 
-// ─── Tree Node Component ───────────────────────────────────────────────────────
+function initials(name: string): string {
+  return name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+}
 
-function TreeNode({
+// ─── Build tree from flat data ────────────────────────────────────────────────
+
+function buildTree(sectors: DemoSector[], users: DemoUser[]): SectorNode[] {
+  const usersBySector = new Map<number, DemoUser[]>();
+  for (const u of users) {
+    if (u.sectorId != null) {
+      const arr = usersBySector.get(u.sectorId) ?? [];
+      arr.push(u);
+      usersBySector.set(u.sectorId, arr);
+    }
+  }
+
+  const nodeMap = new Map<number, SectorNode>();
+  for (const s of sectors) {
+    nodeMap.set(s.id, { sector: s, users: usersBySector.get(s.id) ?? [], children: [] });
+  }
+
+  const roots: SectorNode[] = [];
+  for (const s of sectors) {
+    const node = nodeMap.get(s.id)!;
+    if (s.parentId != null && nodeMap.has(s.parentId)) {
+      nodeMap.get(s.parentId)!.children.push(node);
+    } else {
+      roots.push(node);
+    }
+  }
+  return roots;
+}
+
+// ─── Filter tree by search ────────────────────────────────────────────────────
+
+function treeMatchesSearch(node: SectorNode, query: string): boolean {
+  const q = query.toLowerCase();
+  if (node.sector.name.toLowerCase().includes(q) || node.sector.code.toLowerCase().includes(q)) return true;
+  if (node.users.some(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q))) return true;
+  return node.children.some(c => treeMatchesSearch(c, q));
+}
+
+function filterTree(nodes: SectorNode[], query: string): SectorNode[] {
+  if (!query) return nodes;
+  return nodes.filter(n => treeMatchesSearch(n, query)).map(n => ({
+    ...n,
+    children: filterTree(n.children, query),
+  }));
+}
+
+// ─── Sector Tree Node ─────────────────────────────────────────────────────────
+
+function SectorTreeNode({
   node,
-  depth,
   onSelect,
   loading,
+  searchQuery,
+  defaultOpen,
 }: {
-  node: OrgNode;
-  depth: number;
-  onSelect: (user: OrgUser) => void;
+  node: SectorNode;
+  onSelect: (user: DemoUser) => void;
   loading: string | null;
+  searchQuery: string;
+  defaultOpen: boolean;
 }) {
-  const [open, setOpen] = useState(depth === 0);
-  const hasChildren = node.children && node.children.length > 0;
-  const Icon = NODE_ICONS[node.icon];
-  const isUser = !!node.user;
-  const roleMeta = isUser ? ROLE_META[node.user!.role] : null;
-  const isLoading = isUser && loading === node.user!.email;
+  const [open, setOpen] = useState(defaultOpen);
+  const hasContent = node.children.length > 0 || node.users.length > 0;
+  const Icon = depthIcon(node.sector.depth);
+  const style = depthStyle(node.sector.depth);
+  const totalUsers = countUsers(node);
 
-  const indentPx = depth * 16;
-
-  if (isUser) {
-    return (
-      <motion.button
-        initial={{ opacity: 0, x: -8 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.18 }}
-        onClick={() => onSelect(node.user!)}
-        disabled={!!loading}
-        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all group disabled:opacity-60"
-        style={{ marginLeft: indentPx, width: `calc(100% - ${indentPx}px)`, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
-        whileHover={{ scale: 1.01, backgroundColor: 'rgba(255,255,255,0.07)' }}
-        whileTap={{ scale: 0.98 }}
-      >
-        {/* Avatar */}
-        <div
-          className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center text-[11px] font-bold"
-          style={{ background: roleMeta!.bg, color: roleMeta!.color, border: `1px solid ${roleMeta!.color}30` }}
-        >
-          {isLoading ? <LoadingSpinner size={14} className="p-0" style={{ color: roleMeta!.color }} /> : node.user!.initials}
-        </div>
-
-        {/* Name + role */}
-        <div className="flex-1 min-w-0">
-          <p className="text-white/80 text-[12px] font-semibold truncate group-hover:text-white transition-colors">{node.user!.name}</p>
-          <p className="text-white/30 text-[10px] font-mono truncate">{node.user!.email}</p>
-        </div>
-
-        {/* Role badge */}
-        <span
-          className="shrink-0 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md"
-          style={{ color: roleMeta!.color, background: roleMeta!.bg }}
-        >
-          {roleMeta!.label}
-        </span>
-
-        {/* Arrow */}
-        <LogIn size={12} className="shrink-0 text-white/20 group-hover:text-white/60 transition-colors" />
-      </motion.button>
-    );
-  }
+  // Auto-expand when searching
+  useEffect(() => {
+    if (searchQuery && treeMatchesSearch(node, searchQuery)) {
+      setOpen(true);
+    }
+  }, [searchQuery, node]);
 
   return (
     <div>
       <button
-        onClick={() => hasChildren && setOpen((o) => !o)}
-        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all ${hasChildren ? 'cursor-pointer hover:bg-white/5' : 'cursor-default opacity-50'}`}
-        style={{ marginLeft: indentPx, width: `calc(100% - ${indentPx}px)` }}
+        onClick={() => hasContent && setOpen(o => !o)}
+        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all ${hasContent ? 'cursor-pointer hover:bg-white/5' : 'cursor-default opacity-50'}`}
       >
-        {hasChildren && (
-          <motion.div animate={{ rotate: open ? 90 : 0 }} transition={{ duration: 0.18 }}>
+        {hasContent ? (
+          <motion.div animate={{ rotate: open ? 90 : 0 }} transition={{ duration: 0.15 }}>
             <ChevronRight size={12} className="text-white/30 shrink-0" />
           </motion.div>
+        ) : (
+          <div className="w-3 shrink-0" />
         )}
-        {!hasChildren && <div className="w-3 shrink-0" />}
 
-        <div
-          className="w-6 h-6 rounded-md shrink-0 flex items-center justify-center"
-          style={{
-            background: node.icon === 'govt' ? 'rgba(234,179,8,0.15)' :
-                        depth === 0 ? 'rgba(99,102,241,0.15)' :
-                        depth === 1 ? 'rgba(59,130,246,0.12)' : 'rgba(52,211,153,0.1)',
-          }}
-        >
-          <Icon
-            size={12}
-            style={{
-              color: node.icon === 'govt' ? '#eab308' :
-                     depth === 0 ? '#818cf8' :
-                     depth === 1 ? '#60a5fa' : '#34d399',
-            }}
-          />
+        <div className="w-6 h-6 rounded-md shrink-0 flex items-center justify-center" style={{ background: style.bg }}>
+          <Icon size={12} style={{ color: style.color }} />
         </div>
 
-        <span className="text-white/60 text-[11px] font-semibold truncate flex-1">{node.label}</span>
-        {!hasChildren && node.children !== undefined && (
-          <span className="text-white/20 text-[9px] italic">no accounts</span>
-        )}
+        <span className="text-white/60 text-[11px] font-semibold truncate flex-1">{node.sector.name}</span>
+        <span className="text-[9px] text-white/20 font-mono shrink-0">{node.sector.code}</span>
+        <span className="text-[9px] text-white/15 shrink-0 ml-1">{totalUsers} user{totalUsers !== 1 ? 's' : ''}</span>
       </button>
 
       <AnimatePresence>
-        {open && hasChildren && (
+        {open && hasContent && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.22, ease: 'easeInOut' }}
+            transition={{ duration: 0.2, ease: 'easeInOut' }}
             className="overflow-hidden"
           >
-            <div className="space-y-1 pt-1 pb-1" style={{ marginLeft: indentPx + 4, paddingLeft: 8, borderLeft: '1px solid rgba(255,255,255,0.07)' }}>
-              {node.children!.map((child) => (
-                <TreeNode key={child.id} node={child} depth={0} onSelect={onSelect} loading={loading} />
+            <div className="space-y-0.5 pt-0.5 pb-1 ml-4 pl-3 border-l border-white/7">
+              {/* Users in this sector */}
+              {node.users.map(user => (
+                <UserButton key={user.id} user={user} onSelect={onSelect} loading={loading} />
+              ))}
+              {/* Child sectors */}
+              {node.children.map(child => (
+                <SectorTreeNode
+                  key={child.sector.id}
+                  node={child}
+                  onSelect={onSelect}
+                  loading={loading}
+                  searchQuery={searchQuery}
+                  defaultOpen={node.sector.depth < 1 || !!searchQuery}
+                />
               ))}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+function countUsers(node: SectorNode): number {
+  return node.users.length + node.children.reduce((s, c) => s + countUsers(c), 0);
+}
+
+// ─── User Button ──────────────────────────────────────────────────────────────
+
+function UserButton({ user, onSelect, loading }: { user: DemoUser; onSelect: (u: DemoUser) => void; loading: string | null }) {
+  const meta = ROLE_META[user.role];
+  const isLoading = loading === user.email;
+
+  return (
+    <motion.button
+      initial={{ opacity: 0, x: -6 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.15 }}
+      onClick={() => onSelect(user)}
+      disabled={!!loading}
+      className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left transition-all group disabled:opacity-60 hover:bg-white/5"
+      style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}
+    >
+      <div
+        className="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center text-[10px] font-bold"
+        style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.color}30` }}
+      >
+        {isLoading ? <LoadingSpinner size={12} className="p-0" style={{ color: meta.color }} /> : initials(user.name)}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-white/80 text-[11px] font-semibold truncate group-hover:text-white transition-colors">{user.name}</p>
+        <p className="text-white/25 text-[9px] font-mono truncate">{user.email}</p>
+      </div>
+      <span
+        className="shrink-0 text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
+        style={{ color: meta.color, background: meta.bg }}
+      >
+        {meta.label}
+      </span>
+      <LogIn size={11} className="shrink-0 text-white/15 group-hover:text-white/50 transition-colors" />
+    </motion.button>
   );
 }
 
@@ -342,23 +257,124 @@ function Orb({ x, y, size, color, delay }: { x: string; y: string; size: number;
 // ─── Features list ────────────────────────────────────────────────────────────
 
 const FEATURES = [
-  { icon: BarChart3,  title: 'Real-time Budget Tracking',   desc: 'Live utilization metrics across all institutions and departments.' },
-  { icon: GitBranch, title: 'Hierarchical Allocation',      desc: 'Multi-level budget flows from National Government down to sub-departments.' },
-  { icon: Users,     title: 'Role-based Access Control',    desc: 'Scoped views — each level sees only downward, never upward.' },
-  { icon: Zap,       title: 'Procurement & Catalog',        desc: 'Purchase orders linked to budget allocations in real time.' },
+  { icon: BarChart3, title: 'Real-time Budget Tracking', desc: 'Live utilization metrics across all institutions and departments.' },
+  { icon: GitBranch, title: 'Hierarchical Allocation', desc: 'Multi-level budget flows from National Government down to sub-departments.' },
+  { icon: Users, title: 'Role-based Access Control', desc: 'Scoped views — each level sees only downward, never upward.' },
+  { icon: Zap, title: 'Procurement & Catalog', desc: 'Purchase orders linked to budget allocations in real time.' },
 ];
+
+// ─── Ministry filter dropdown ─────────────────────────────────────────────────
+
+function MinistryFilter({
+  ministries,
+  selected,
+  onSelect,
+}: {
+  ministries: DemoSector[];
+  selected: number | null;
+  onSelect: (id: number | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selectedName = selected ? ministries.find(m => m.id === selected)?.name ?? 'All Ministries' : 'All Ministries';
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] text-white/50 hover:text-white/70 border border-white/10 hover:border-white/20 transition-all bg-white/3"
+      >
+        <Filter size={11} />
+        <span className="truncate max-w-[140px]">{selectedName}</span>
+        <ChevronDown size={10} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            className="absolute top-full left-0 right-0 mt-1 z-50 rounded-lg overflow-hidden max-h-60 overflow-y-auto"
+            style={{ background: 'rgba(10,18,40,0.98)', border: '1px solid rgba(255,255,255,0.1)', minWidth: 200 }}
+          >
+            <button
+              onClick={() => { onSelect(null); setOpen(false); }}
+              className={`w-full text-left px-3 py-2 text-[11px] hover:bg-white/5 transition-colors ${!selected ? 'text-blue-400' : 'text-white/50'}`}
+            >
+              All Ministries
+            </button>
+            {ministries.map(m => (
+              <button
+                key={m.id}
+                onClick={() => { onSelect(m.id); setOpen(false); }}
+                className={`w-full text-left px-3 py-2 text-[11px] hover:bg-white/5 transition-colors truncate ${selected === m.id ? 'text-blue-400' : 'text-white/50'}`}
+              >
+                {m.name}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 type Tab = 'signin' | 'quick';
 
 export default function LoginPage() {
-  const [tab, setTab]           = useState<Tab>('quick');
-  const [email, setEmail]       = useState('');
+  const [tab, setTab] = useState<Tab>('quick');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPw, setShowPw]     = useState(false);
+  const [showPw, setShowPw] = useState(false);
   const [quickLoading, setQuickLoading] = useState<string | null>(null);
-  const [, setLocation]         = useLocation();
+  const [, setLocation] = useLocation();
+  const [search, setSearch] = useState('');
+  const [ministryFilter, setMinistryFilter] = useState<number | null>(null);
+
+  // Fetch demo users from API
+  const [demoData, setDemoData] = useState<{ users: DemoUser[]; sectors: DemoSector[] } | null>(null);
+  const [fetchLoading, setFetchLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/auth/demo-users')
+      .then(res => res.json())
+      .then(data => setDemoData(data))
+      .catch(() => setDemoData({ users: [], sectors: [] }))
+      .finally(() => setFetchLoading(false));
+  }, []);
+
+  const tree = useMemo(() => {
+    if (!demoData) return [];
+    return buildTree(demoData.sectors, demoData.users);
+  }, [demoData]);
+
+  // Filter by ministry (depth=1 sectors)
+  const ministries = useMemo(() => {
+    if (!demoData) return [];
+    return demoData.sectors.filter(s => s.depth === 1);
+  }, [demoData]);
+
+  const filteredTree = useMemo(() => {
+    let nodes = tree;
+    if (ministryFilter != null) {
+      // Show only the selected ministry subtree
+      function findNode(nodes: SectorNode[], id: number): SectorNode | null {
+        for (const n of nodes) {
+          if (n.sector.id === id) return n;
+          const found = findNode(n.children, id);
+          if (found) return found;
+        }
+        return null;
+      }
+      const ministry = findNode(tree, ministryFilter);
+      nodes = ministry ? [ministry] : [];
+    }
+    return filterTree(nodes, search);
+  }, [tree, ministryFilter, search]);
+
+  const totalUsers = demoData?.users.length ?? 0;
+  const totalSectors = demoData?.sectors.length ?? 0;
 
   const loginMutation = useLogin({
     mutation: {
@@ -375,7 +391,7 @@ export default function LoginPage() {
     loginMutation.mutate({ data: { email, password } });
   };
 
-  const handleQuickLogin = (user: OrgUser) => {
+  const handleQuickLogin = (user: DemoUser) => {
     setQuickLoading(user.email);
     loginMutation.mutate({ data: { email: user.email, password: 'password' } });
   };
@@ -384,10 +400,10 @@ export default function LoginPage() {
     <div className="min-h-screen w-full flex overflow-hidden relative" style={{ background: 'linear-gradient(135deg,#060b18 0%,#0a1020 50%,#060d1f 100%)' }}>
 
       {/* Ambient orbs */}
-      <Orb x="-10%"  y="10%"  size={500} color="rgba(59,130,246,0.22)"  delay={0} />
-      <Orb x="60%"   y="55%"  size={450} color="rgba(99,102,241,0.18)"  delay={2} />
-      <Orb x="20%"   y="65%"  size={350} color="rgba(16,185,129,0.12)"  delay={4} />
-      <Orb x="80%"   y="-5%"  size={320} color="rgba(59,130,246,0.15)"  delay={1} />
+      <Orb x="-10%" y="10%" size={500} color="rgba(59,130,246,0.22)" delay={0} />
+      <Orb x="60%" y="55%" size={450} color="rgba(99,102,241,0.18)" delay={2} />
+      <Orb x="20%" y="65%" size={350} color="rgba(16,185,129,0.12)" delay={4} />
+      <Orb x="80%" y="-5%" size={320} color="rgba(59,130,246,0.15)" delay={1} />
 
       {/* Dot grid */}
       <div
@@ -395,7 +411,7 @@ export default function LoginPage() {
         style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.6) 1px, transparent 1px)', backgroundSize: '32px 32px' }}
       />
 
-      {/* ══ LEFT BRAND PANEL ══ */}
+      {/* LEFT BRAND PANEL */}
       <motion.div
         initial={{ opacity: 0, x: -40 }}
         animate={{ opacity: 1, x: 0 }}
@@ -407,8 +423,8 @@ export default function LoginPage() {
             <Shield size={20} className="text-white" />
           </div>
           <div>
-            <p className="text-white font-bold text-base leading-none">TVET Budget Monitor</p>
-            <p className="text-white/30 text-[10px] uppercase tracking-widest mt-0.5">Technical & Vocational Education</p>
+            <p className="text-white font-bold text-base leading-none">Budget Monitor</p>
+            <p className="text-white/30 text-[10px] uppercase tracking-widest mt-0.5">Republic of Kenya</p>
           </div>
         </div>
 
@@ -424,12 +440,12 @@ export default function LoginPage() {
               <span className="text-white">Platform</span>
             </h1>
             <p className="text-white/40 text-base mt-4 leading-relaxed max-w-sm">
-              Transparent allocation, real-time monitoring and hierarchical oversight for Kenya's TVET institutions.
+              Transparent allocation, real-time monitoring and hierarchical oversight for Kenya's government institutions.
             </p>
           </motion.div>
 
           <motion.div className="space-y-4 mt-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.45, duration: 0.6 }}>
-            {FEATURES.map(({ icon: Icon, title, desc }, i) => (
+            {FEATURES.map(({ icon: FIcon, title, desc }, i) => (
               <motion.div
                 key={title}
                 initial={{ opacity: 0, x: -16 }}
@@ -438,7 +454,7 @@ export default function LoginPage() {
                 className="flex items-start gap-4"
               >
                 <div className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center border border-white/10" style={{ background: 'rgba(59,130,246,0.12)' }}>
-                  <Icon size={16} className="text-blue-400" />
+                  <FIcon size={16} className="text-blue-400" />
                 </div>
                 <div>
                   <p className="text-white/80 text-sm font-semibold">{title}</p>
@@ -451,12 +467,12 @@ export default function LoginPage() {
 
         <div className="flex items-center gap-3">
           <div className="h-px flex-1 bg-white/10" />
-          <p className="text-white/20 text-xs tracking-wider">REPUBLIC OF KENYA · FY 2024/25</p>
+          <p className="text-white/20 text-xs tracking-wider">REPUBLIC OF KENYA · FY 2025/26</p>
           <div className="h-px flex-1 bg-white/10" />
         </div>
       </motion.div>
 
-      {/* ══ RIGHT PANEL ══ */}
+      {/* RIGHT PANEL */}
       <motion.div
         initial={{ opacity: 0, x: 40 }}
         animate={{ opacity: 1, x: 0 }}
@@ -470,11 +486,11 @@ export default function LoginPage() {
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3" style={{ background: 'linear-gradient(135deg,#3b82f6,#6366f1)' }}>
               <Shield size={24} className="text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-white">TVET Budget Monitor</h1>
+            <h1 className="text-3xl font-bold text-white">Budget Monitor</h1>
             <p className="text-white/40 text-sm">National Budget Control Platform</p>
           </div>
 
-          {/* ── Card ── */}
+          {/* Card */}
           <div
             className="relative rounded-2xl overflow-hidden"
             style={{
@@ -484,21 +500,20 @@ export default function LoginPage() {
               backdropFilter: 'blur(24px)',
             }}
           >
-            {/* Top accent line */}
             <div className="absolute top-0 left-8 right-8 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(99,102,241,0.7), rgba(59,130,246,0.7), transparent)' }} />
 
-            {/* ── Tabs ── */}
+            {/* Tabs */}
             <div className="flex border-b border-white/8">
               {([
-                { id: 'quick',  label: 'Quick Login',  icon: Users   },
-                { id: 'signin', label: 'Email Sign In', icon: Mail },
-              ] as { id: Tab; label: string; icon: typeof Users }[]).map(({ id, label, icon: Icon }) => (
+                { id: 'quick' as Tab, label: 'Quick Login', icon: Users },
+                { id: 'signin' as Tab, label: 'Email Sign In', icon: Mail },
+              ]).map(({ id, label, icon: TIcon }) => (
                 <button
                   key={id}
                   onClick={() => setTab(id)}
                   className={`flex-1 flex items-center justify-center gap-2 py-4 text-xs font-bold uppercase tracking-wider transition-all relative ${tab === id ? 'text-white' : 'text-white/30 hover:text-white/60'}`}
                 >
-                  <Icon size={13} />
+                  <TIcon size={13} />
                   {label}
                   {tab === id && (
                     <motion.div
@@ -513,7 +528,7 @@ export default function LoginPage() {
 
             <AnimatePresence mode="wait">
 
-              {/* ════════ QUICK LOGIN TAB ════════ */}
+              {/* QUICK LOGIN TAB */}
               {tab === 'quick' && (
                 <motion.div
                   key="quick"
@@ -523,51 +538,35 @@ export default function LoginPage() {
                   transition={{ duration: 0.22 }}
                   className="p-5"
                 >
-                  {/* Institution summary chips */}
-                  {(() => {
-                    const CHIPS: { label: string; icon: OrgNode['icon']; accounts: number; indent?: boolean; indentLevel?: number }[] = [
-                      { label: 'National Government',                              icon: 'govt',        accounts: 2 },
-                      { label: 'Ministry of Education',                            icon: 'ministry',    accounts: 2, indent: true, indentLevel: 1 },
-                      { label: 'TVET Authority',                                   icon: 'authority',   accounts: 3, indent: true, indentLevel: 2 },
-                      { label: 'The Ollessos National Polytechnic',                icon: 'institution', accounts: 5, indent: true, indentLevel: 3 },
-                      { label: 'Kenya Institute of Business Training',             icon: 'institution', accounts: 2, indent: true, indentLevel: 3 },
-                      { label: 'Rift Valley Institute of Science & Technology',    icon: 'institution', accounts: 2, indent: true, indentLevel: 3 },
-                    ];
-                    const ICON_STYLE: Record<OrgNode['icon'], { bg: string; color: string; rowBg: string; rowBorder: string }> = {
-                      govt:        { bg: 'rgba(234,179,8,0.2)',   color: '#eab308', rowBg: 'rgba(234,179,8,0.06)',   rowBorder: 'rgba(234,179,8,0.2)'   },
-                      ministry:    { bg: 'rgba(139,92,246,0.2)',  color: '#a78bfa', rowBg: 'rgba(139,92,246,0.06)', rowBorder: 'rgba(139,92,246,0.18)' },
-                      authority:   { bg: 'rgba(99,102,241,0.2)',  color: '#818cf8', rowBg: 'rgba(99,102,241,0.06)', rowBorder: 'rgba(99,102,241,0.14)' },
-                      institution: { bg: 'rgba(59,130,246,0.15)', color: '#60a5fa', rowBg: 'rgba(59,130,246,0.05)', rowBorder: 'rgba(59,130,246,0.12)' },
-                      school:      { bg: 'rgba(52,211,153,0.15)', color: '#34d399', rowBg: 'rgba(52,211,153,0.05)', rowBorder: 'rgba(52,211,153,0.12)' },
-                      department:  { bg: 'rgba(148,163,184,0.1)', color: '#94a3b8', rowBg: 'rgba(148,163,184,0.04)', rowBorder: 'rgba(148,163,184,0.1)' },
-                    };
-                    return (
-                      <div className="flex flex-col gap-1 mb-3">
-                        {CHIPS.map(chip => {
-                          const Icon = NODE_ICONS[chip.icon];
-                          const s = ICON_STYLE[chip.icon];
-                          const ml = (chip.indentLevel ?? 0) * 10;
-                          return (
-                            <div
-                              key={chip.label}
-                              className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg"
-                              style={{ marginLeft: ml, background: s.rowBg, border: `1px solid ${s.rowBorder}` }}
-                            >
-                              {chip.indent && <div className="w-px h-3 bg-white/10 shrink-0" />}
-                              <div className="w-5 h-5 rounded-md shrink-0 flex items-center justify-center" style={{ background: s.bg }}>
-                                <Icon size={11} style={{ color: s.color }} />
-                              </div>
-                              <span className="text-white/60 text-[11px] font-semibold truncate">{chip.label}</span>
-                              <span className="ml-auto shrink-0 text-[9px] text-white/20 font-mono">{chip.accounts} accounts</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    );
-                  })()}
+                  {/* Stats bar */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-blue-500/10 border border-blue-500/20">
+                      <Users size={10} className="text-blue-400" />
+                      <span className="text-[10px] text-blue-400 font-bold">{totalUsers.toLocaleString()} users</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-indigo-500/10 border border-indigo-500/20">
+                      <Building2 size={10} className="text-indigo-400" />
+                      <span className="text-[10px] text-indigo-400 font-bold">{totalSectors.toLocaleString()} sectors</span>
+                    </div>
+                  </div>
 
-                  <p className="text-white/30 text-[11px] mb-4 text-center">
-                    Browse the hierarchy and click any account to sign in. Each level sees only downward.
+                  {/* Search + Filter */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="relative flex-1">
+                      <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/25" />
+                      <input
+                        type="text"
+                        placeholder="Search users, sectors, codes..."
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        className="w-full pl-8 pr-3 py-1.5 rounded-lg text-[11px] text-white bg-white/5 border border-white/10 placeholder:text-white/20 focus:border-blue-500/40 focus:outline-none"
+                      />
+                    </div>
+                    <MinistryFilter ministries={ministries} selected={ministryFilter} onSelect={setMinistryFilter} />
+                  </div>
+
+                  <p className="text-white/30 text-[10px] mb-3 text-center">
+                    Browse the hierarchy and click any user to sign in. Password: <span className="font-mono text-white/40">password</span>
                   </p>
 
                   {/* Error */}
@@ -577,7 +576,7 @@ export default function LoginPage() {
                         initial={{ opacity: 0, y: -6 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0 }}
-                        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-rose-500/30 bg-rose-500/10 mb-4"
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-rose-500/30 bg-rose-500/10 mb-3"
                       >
                         <AlertTriangle size={13} className="text-rose-400 shrink-0" />
                         <p className="text-rose-400 text-xs">Login failed. Please try again.</p>
@@ -586,23 +585,33 @@ export default function LoginPage() {
                   </AnimatePresence>
 
                   {/* Tree */}
-                  <div className="space-y-1.5 max-h-[460px] overflow-y-auto pr-1 custom-scroll">
-                    {ORG_TREE.map((node) => (
-                      <TreeNode
-                        key={node.id}
-                        node={node}
-                        depth={0}
-                        onSelect={handleQuickLogin}
-                        loading={quickLoading}
-                      />
-                    ))}
+                  <div className="space-y-0.5 max-h-[420px] overflow-y-auto pr-1 custom-scroll">
+                    {fetchLoading ? (
+                      <div className="flex items-center justify-center py-12">
+                        <LoadingSpinner size={24} />
+                        <span className="text-white/30 text-xs ml-3">Loading users...</span>
+                      </div>
+                    ) : filteredTree.length === 0 ? (
+                      <div className="text-center py-8">
+                        <p className="text-white/20 text-xs">No users match your search.</p>
+                      </div>
+                    ) : (
+                      filteredTree.map(node => (
+                        <SectorTreeNode
+                          key={node.sector.id}
+                          node={node}
+                          onSelect={handleQuickLogin}
+                          loading={quickLoading}
+                          searchQuery={search}
+                          defaultOpen={node.sector.depth === 0}
+                        />
+                      ))
+                    )}
                   </div>
-
-                  <p className="text-white/15 text-[10px] text-center mt-4">All demo accounts use password: <span className="font-mono text-white/25">password</span></p>
                 </motion.div>
               )}
 
-              {/* ════════ EMAIL SIGN IN TAB ════════ */}
+              {/* EMAIL SIGN IN TAB */}
               {tab === 'signin' && (
                 <motion.div
                   key="signin"
@@ -680,7 +689,7 @@ export default function LoginPage() {
                       whileTap={{ scale: 0.98 }}
                     >
                       {loginMutation.isPending ? <LoadingSpinner size={16} className="p-0" /> : <LogIn size={16} />}
-                      {loginMutation.isPending ? 'Signing in…' : 'Sign In'}
+                      {loginMutation.isPending ? 'Signing in...' : 'Sign In'}
                     </motion.button>
                   </form>
                 </motion.div>

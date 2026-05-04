@@ -4,7 +4,8 @@ import {
   useUpdateCycle, 
   useActivateCycle,
   getListCyclesQueryKey,
-  getGetDashboardSummaryQueryKey
+  getGetDashboardSummaryQueryKey,
+  BudgetCycle,
 } from '@workspace/api-client-react';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -128,7 +129,7 @@ export default function CyclesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {cycles?.map((item) => (
+              {cycles?.map((item: BudgetCycle) => (
                 <TableRow key={item.id} className="hover:bg-white/5 border-white/5 transition-colors">
                   <TableCell className="text-white font-medium">{item.name}</TableCell>
                   <TableCell className="text-white font-bold">{formatCurrency(item.totalBudget)}</TableCell>

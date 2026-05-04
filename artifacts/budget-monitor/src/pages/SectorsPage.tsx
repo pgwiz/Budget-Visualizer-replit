@@ -68,7 +68,7 @@ export default function SectorsPage() {
 
         {/* ── Org Chart ── */}
         <TabsContent value="orgchart">
-          <GlassCard className="p-6 overflow-hidden">
+          <GlassCard className="p-6 overflow-hidden max-w-full">
             {treeLoading ? (
               <LoadingSpinner size={40} className="py-20" />
             ) : (
