@@ -323,7 +323,7 @@ function MinistryFilter({
 type Tab = 'signin' | 'quick';
 
 export default function LoginPage() {
-  const [tab, setTab] = useState<Tab>('quick');
+  const [tab, setTab] = useState<Tab>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
@@ -334,15 +334,29 @@ export default function LoginPage() {
 
   // Fetch demo users from API
   const [demoData, setDemoData] = useState<{ users: DemoUser[]; sectors: DemoSector[] } | null>(null);
-  const [fetchLoading, setFetchLoading] = useState(true);
+  const [fetchLoading, setFetchLoading] = useState(false);
 
   useEffect(() => {
-    fetch('/api/auth/demo-users')
+    if (tab !== 'quick' || demoData) return;
+
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 15000);
+    setFetchLoading(true);
+
+    fetch('/api/auth/demo-users', { signal: controller.signal })
       .then(res => res.json())
       .then(data => setDemoData(data))
       .catch(() => setDemoData({ users: [], sectors: [] }))
-      .finally(() => setFetchLoading(false));
-  }, []);
+      .finally(() => {
+        window.clearTimeout(timeoutId);
+        setFetchLoading(false);
+      });
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, [tab, demoData]);
 
   const tree = useMemo(() => {
     if (!demoData) return [];
@@ -591,6 +605,11 @@ export default function LoginPage() {
                       <div className="flex items-center justify-center py-12">
                         <LoadingSpinner size={24} />
                         <span className="text-white/30 text-xs ml-3">Loading users...</span>
+                      </div>
+                    ) : totalUsers === 0 ? (
+                      <div className="text-center py-8">
+                        <p className="text-white/30 text-xs">Unable to load quick-login users right now.</p>
+                        <p className="text-white/20 text-[11px] mt-1">Use the Sign In tab, then retry Quick Login.</p>
                       </div>
                     ) : filteredTree.length === 0 ? (
                       <div className="text-center py-8">
