@@ -51,6 +51,9 @@ router.get("/auth/demo-users", async (_req, res): Promise<void> => {
       .from(sectorsTable)
       .orderBy(sectorsTable.depth, sectorsTable.name);
 
+    const logger = require('../lib/logger').logger;
+    logger.info({ usersCount: users.length, sectorsCount: sectors.length }, '[DEBUG] demo-users loaded from database');
+
     res.set('Cache-Control', 'public, max-age=300'); // 5 minute cache for demo data
     res.json({ users, sectors });
   } catch (error) {
