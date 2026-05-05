@@ -4,8 +4,12 @@ import pinoHttp from "pino-http";
 import cookieParser from "cookie-parser";
 import session from "express-session";
 import type { IncomingMessage, ServerResponse } from "http";
+import path from "path";
+import { fileURLToPath } from "url";
 import router from "./routes/index.js";
 import { logger } from "./lib/logger";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app: Express = express();
 
@@ -55,5 +59,14 @@ app.use(session({
 }));
 
 app.use("/api", router);
+
+// Serve budget-monitor frontend
+const budgetMonitorDir = path.join(__dirname, "../../budget-monitor/dist/public");
+app.use(express.static(budgetMonitorDir));
+
+// SPA fallback: serve index.html for client-side routing
+app.get("*", (req, res) => {
+  res.sendFile(path.join(budgetMonitorDir, "index.html"));
+});
 
 export default app;
