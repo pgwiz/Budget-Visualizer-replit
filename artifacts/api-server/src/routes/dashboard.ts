@@ -102,10 +102,17 @@ router.get("/dashboard/summary", requireAuth, async (req, res): Promise<void> =>
       utilizationPct   = totalBudget > 0 ? Math.min(100, (totalAllocated / totalBudget) * 100) : 0;
     } else {
       // Scoped non-root: budget = what was net-allocated TO this sector
-      totalBudget      = await getNetAllocated(scopeSectorId, cycleId);
-      totalAllocated   = await getTotalAllocatedFrom(scopeSectorId, cycleId);
-      availableBalance = await getAvailableBalance(scopeSectorId, cycleId);
-      utilizationPct   = await getUtilizationPct(scopeSectorId, cycleId);
+      // Run all queries in parallel
+      const [netAlloc, totalAlloc, availBal, utilizPct] = await Promise.all([
+        getNetAllocated(scopeSectorId, cycleId),
+        getTotalAllocatedFrom(scopeSectorId, cycleId),
+        getAvailableBalance(scopeSectorId, cycleId),
+        getUtilizationPct(scopeSectorId, cycleId),
+      ]);
+      totalBudget      = netAlloc;
+      totalAllocated   = totalAlloc;
+      availableBalance = availBal;
+      utilizationPct   = utilizPct;
     }
   }
 
@@ -132,12 +139,15 @@ router.get("/dashboard/summary", requireAuth, async (req, res): Promise<void> =>
     : await db.select().from(sectorsTable).where(eq(sectorsTable.parentId, scopeSectorId));
 
   const topSectors = await Promise.all(childSectors.map(async s => {
-    const ta    = cycleId ? await getTotalAllocated(s.id, cycleId) : 0;
-    const tr    = cycleId ? await getTotalRevoked(s.id, cycleId) : 0;
-    const avail = cycleId ? await getAvailableBalance(s.id, cycleId) : 0;
-    const pct   = cycleId ? await getUtilizationPct(s.id, cycleId) : 0;
-    const children = await db.select({ id: sectorsTable.id }).from(sectorsTable).where(eq(sectorsTable.parentId, s.id));
-    return { ...s, totalAllocated: ta, totalRevoked: tr, netAllocated: ta - tr, availableBalance: avail, utilizationPct: pct, childCount: children.length, responsibleUser: null, parent: null };
+    // Run all budget calculations in parallel for this sector
+    const [ta, tr, avail, pct, childrenResult] = await Promise.all([
+      cycleId ? getTotalAllocated(s.id, cycleId) : Promise.resolve(0),
+      cycleId ? getTotalRevoked(s.id, cycleId) : Promise.resolve(0),
+      cycleId ? getAvailableBalance(s.id, cycleId) : Promise.resolve(0),
+      cycleId ? getUtilizationPct(s.id, cycleId) : Promise.resolve(0),
+      db.select({ id: sectorsTable.id }).from(sectorsTable).where(eq(sectorsTable.parentId, s.id)),
+    ]);
+    return { ...s, totalAllocated: ta, totalRevoked: tr, netAllocated: ta - tr, availableBalance: avail, utilizationPct: pct, childCount: childrenResult.length, responsibleUser: null, parent: null };
   }));
 
   // My personal sector stats (always shown when sector is set)
@@ -157,7 +167,12 @@ router.get("/dashboard/summary", requireAuth, async (req, res): Promise<void> =>
     myAllocated, myDistributed, myAvailable,
   };
 
-  // Cache the result for 5 minutes
+  // Cache the result for 5 minutes with HTTP headers
+  // Browser and CDN (Cloudflare) will cache this response
+  res.set('Cache-Control', 'private, max-age=300'); // 5 minutes, private to user
+  res.set('Vary', 'Cookie'); // Cache varies by user session
+  
+  // Also keep in-memory cache for same-process hits
   setInCache(cacheKey, result);
   
   res.json(result);
