@@ -393,9 +393,11 @@ export default function LoginPage() {
   const loginMutation = useLogin({
     mutation: {
       onSuccess: (data) => {
+        // Set auth cache with user data from login response
+        // Don't invalidate - the login response IS our auth state
         queryClient.setQueryData(getGetMeQueryKey(), data.user);
-        queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
-        setLocation('/');
+        // Small delay ensures Set-Cookie is processed before navigation
+        setTimeout(() => setLocation('/'), 100);
       },
       onSettled: () => setQuickLoading(null),
     },
