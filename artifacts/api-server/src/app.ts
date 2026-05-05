@@ -43,8 +43,14 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 const sessionSecret = process.env.SESSION_SECRET || "default-insecure-secret";
+const isProduction = process.env.NODE_ENV === "production";
 if (!process.env.SESSION_SECRET) {
   logger.warn("SESSION_SECRET environment variable not set - using insecure default. Set SESSION_SECRET in environment for production security.");
+}
+
+if (isProduction) {
+  // Render/Cloudflare terminate TLS before forwarding to Node.
+  app.set("trust proxy", 1);
 }
 
 app.use(session({
@@ -52,7 +58,8 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: false,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
     httpOnly: true,
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   },
