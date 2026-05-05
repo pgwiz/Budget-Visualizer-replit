@@ -89,4 +89,16 @@ router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
   res.json({ ...safeUser, sector });
 });
 
+// Diagnostics endpoint (development only)
+router.get("/auth/diagnostics", (_req, res): Promise<void> | void => {
+  const diagnostics = {
+    db_type: process.env.DB_TYPE || "(not set - defaults to prisma)",
+    has_supabasedb_string: !!process.env.SUPABASEDB_STRING,
+    has_database_url: !!process.env.DATABASE_URL,
+    supabasedb_string_preview: process.env.SUPABASEDB_STRING ? process.env.SUPABASEDB_STRING.substring(0, 30) + "..." : null,
+    node_env: process.env.NODE_ENV,
+  };
+  res.json(diagnostics);
+});
+
 export default router;
