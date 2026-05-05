@@ -8,9 +8,32 @@ export async function getSubtreeIds(rootId: number): Promise<number[]> {
   const queue = [rootId];
   while (queue.length) {
     const cur = queue.shift()!;
-    const children = all.filter(s => s.parentId === cur).map(s => s.id);
+    const children = all.filter((s: { id: number; parentId: number | null }) => s.parentId === cur).map((s: { id: number }) => s.id);
     ids.push(...children);
     queue.push(...children);
+  }
+  return ids;
+}
+
+/** Returns IDs of immediate children of a sector */
+export async function getImmediateChildIds(sectorId: number): Promise<number[]> {
+  const children = await db.select({ id: sectorsTable.id }).from(sectorsTable).where(eq(sectorsTable.parentId, sectorId));
+  return children.map((c: { id: number }) => c.id);
+}
+
+/** Returns descendant IDs limited to a max depth from the root */
+export async function getSubtreeIdsWithDepth(rootId: number, maxDepth: number): Promise<number[]> {
+  const all = await db.select({ id: sectorsTable.id, parentId: sectorsTable.parentId }).from(sectorsTable);
+  const ids: number[] = [rootId];
+  const queue: Array<{ id: number; depth: number }> = [{ id: rootId, depth: 0 }];
+  while (queue.length) {
+    const cur = queue.shift()!;
+    if (cur.depth >= maxDepth) continue;
+    const children = all.filter((s: { id: number; parentId: number | null }) => s.parentId === cur.id);
+    for (const child of children) {
+      ids.push(child.id);
+      queue.push({ id: child.id, depth: cur.depth + 1 });
+    }
   }
   return ids;
 }
@@ -65,7 +88,7 @@ export async function getTotalAllocatedFrom(sectorId: number | null, cycleId: nu
   if (sectorId === null) {
     // "From root" = allocations originating from top-level sectors (parentId IS NULL)
     const roots = await db.select({ id: sectorsTable.id }).from(sectorsTable).where(sql`${sectorsTable.parentId} IS NULL`);
-    const rootIds = roots.map(r => r.id);
+    const rootIds = roots.map((r: { id: number }) => r.id);
     if (rootIds.length === 0) return 0;
     whereClause = and(eq(allocationsTable.budgetCycleId, cycleId), inArray(allocationsTable.fromSectorId, rootIds), inArray(allocationsTable.status, ["active", "pending", "exhausted"]));
   } else {

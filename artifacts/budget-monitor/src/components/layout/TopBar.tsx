@@ -61,7 +61,7 @@ export function TopBar() {
   const pageTitle = PAGE_LABELS[pathKey] ?? (pathKey.charAt(0).toUpperCase() + pathKey.slice(1));
   const roleColor = ROLE_COLORS[user?.role ?? ''] ?? '#94a3b8';
   const roleLabel = ROLE_LABELS[user?.role ?? ''] ?? user?.role ?? '';
-  const initials  = user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() ?? '?';
+  const initials  = user?.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() ?? '?';
 
   return (
     <header

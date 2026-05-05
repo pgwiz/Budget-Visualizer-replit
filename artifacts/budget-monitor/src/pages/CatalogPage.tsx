@@ -146,14 +146,14 @@ export default function CatalogPage() {
   const updateMutation = useUpdateProduct({ mutation: { onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['products'] }); setEditId(null); } } });
   const deleteMutation = useDeleteProduct({ mutation: { onSuccess: () => queryClient.invalidateQueries({ queryKey: ['products'] }) } });
 
-  const categories = [...new Set(products.map(p => p.category))].sort();
+  const categories: string[] = [...new Set(products.map((p: Product) => p.category))].sort();
 
   const filtered = search
-    ? products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase()))
+    ? products.filter((p: Product) => p.name.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase()))
     : products;
 
   const grouped = categories.reduce<Record<string, Product[]>>((acc, cat) => {
-    acc[cat] = filtered.filter(p => p.category === cat);
+    acc[cat as string] = filtered.filter((p: Product) => p.category === cat);
     return acc;
   }, {});
 
@@ -240,7 +240,7 @@ export default function CatalogPage() {
                       exit={{ opacity: 0, height: 0 }}
                       className="space-y-1.5 overflow-hidden"
                     >
-                      {items.map(product => (
+                      {items.map((product: Product) => (
                         editId === product.id ? (
                           <AnimatePresence key={product.id}>
                             <ProductForm

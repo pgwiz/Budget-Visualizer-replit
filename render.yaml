@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: budget-visualizer-api
+    runtime: docker
+    plan: standard
+    region: oregon
+    buildCommand: pnpm install --frozen-lockfile && pnpm -r --filter "./artifacts/api-server" --filter "./artifacts/budget-monitor" run build
+    startCommand: node --enable-source-maps ./artifacts/api-server/dist/index.mjs
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_TYPE
+        value: prisma
+      - key: DATABASE_URL
+        sync: false
+      - key: POSTGRES_URL
+        sync: false
+      - key: PRISMA_DATABASE_URL
+        sync: false
+      - key: SUPABASEDB_STRING
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: PORT
+        value: "3000"

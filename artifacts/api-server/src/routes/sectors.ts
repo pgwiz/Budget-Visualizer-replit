@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db, sectorsTable, usersTable, allocationsTable, budgetCyclesTable } from "@workspace/db";
 import { eq, and, inArray, sql, isNull } from "drizzle-orm";
 import { requireAuth, requireRole } from "../lib/auth";
-import { getNetAllocated, getTotalAllocated, getTotalRevoked, getTotalAllocatedFrom, getAvailableBalance, getUtilizationPct, getSubtreeIds, getUserScopeId } from "../lib/budget-calc";
+import { getNetAllocated, getTotalAllocated, getTotalRevoked, getTotalAllocatedFrom, getAvailableBalance, getUtilizationPct, getSubtreeIds, getSubtreeIdsWithDepth, getUserScopeId } from "../lib/budget-calc";
 
 const router = Router();
 
@@ -43,8 +43,17 @@ async function enrichSector(sector: any, cycleId: number | null) {
   };
 }
 
-async function buildTreeNode(sector: any, cycleId: number | null, allSectors: any[], cycleTotalBudget?: number): Promise<any> {
-  const children = allSectors.filter(s => s.parentId === sector.id);
+async function buildTreeNode(
+  sector: any,
+  cycleId: number | null,
+  allSectors: any[],
+  cycleTotalBudget?: number,
+  maxDepth?: number,
+  currentRelativeDepth?: number,
+): Promise<any> {
+  const relDepth = currentRelativeDepth ?? 0;
+  const atDepthLimit = maxDepth !== undefined && relDepth >= maxDepth;
+  const children = atDepthLimit ? [] : allSectors.filter((s: any) => s.parentId === sector.id);
   let responsibleUser = null;
   if (sector.responsibleUserId) {
     const users = await db.select({ id: usersTable.id, name: usersTable.name, email: usersTable.email, role: usersTable.role }).from(usersTable).where(eq(usersTable.id, sector.responsibleUserId)).limit(1);
@@ -54,7 +63,6 @@ async function buildTreeNode(sector: any, cycleId: number | null, allSectors: an
   let totalAllocated = 0, totalRevoked = 0, netAllocated = 0, availableBalance = 0, utilizationPct = 0;
   if (cycleId) {
     if (isRoot && cycleTotalBudget != null) {
-      // Root sector: its "received" budget is the cycle total; compute outflows directly
       const distributed = await getTotalAllocatedFrom(sector.id, cycleId);
       totalAllocated = cycleTotalBudget;
       totalRevoked = 0;
@@ -69,12 +77,17 @@ async function buildTreeNode(sector: any, cycleId: number | null, allSectors: an
       utilizationPct = await getUtilizationPct(sector.id, cycleId);
     }
   }
-  const childNodes = await Promise.all(children.map(c => buildTreeNode(c, cycleId, allSectors, cycleTotalBudget)));
+  const allChildren = allSectors.filter((s: any) => s.parentId === sector.id);
+  const childNodes = await Promise.all(children.map((c: any) =>
+    buildTreeNode(c, cycleId, allSectors, cycleTotalBudget, maxDepth, relDepth + 1)
+  ));
   return {
     id: sector.id, name: sector.name, code: sector.code, depth: sector.depth, parentId: sector.parentId,
+    maxDepthVisible: sector.maxDepthVisible ?? 1,
     totalAllocated, totalRevoked, netAllocated,
     availableBalance, utilizationPct, responsibleUser,
-    children: childNodes.sort((a, b) => a.id - b.id),
+    childCount: allChildren.length,
+    children: childNodes.sort((a: any, b: any) => a.id - b.id),
   };
 }
 
@@ -82,23 +95,28 @@ router.get("/sectors", requireAuth, async (req, res): Promise<void> => {
   const user = (req as any).user;
   const cycleId = await getActiveCycleId();
   let allSectors = await db.select().from(sectorsTable).orderBy(sectorsTable.sortOrder, sectorsTable.name);
-  // Scope: non-executive users only see their subtree
   const scopeSectorId = getUserScopeId(user);
   if (scopeSectorId !== null) {
     const subtreeIds = await getSubtreeIds(scopeSectorId);
-    allSectors = allSectors.filter(s => subtreeIds.includes(s.id));
+    allSectors = allSectors.filter((s: any) => subtreeIds.includes(s.id));
   }
-  const enriched = await Promise.all(allSectors.map(s => enrichSector(s, cycleId)));
+  const enriched = await Promise.all(allSectors.map((s: any) => enrichSector(s, cycleId)));
   res.json(enriched);
 });
 
+/**
+ * GET /sectors/tree
+ * Supports ?maxDepth=N to limit visible hierarchy levels
+ * Supports ?advanced=true to override depth limit and show all descendants
+ */
 router.get("/sectors/tree", requireAuth, async (req, res): Promise<void> => {
   const user = (req as any).user;
   const cycleIdParam = req.query.cycleId ? parseInt(req.query.cycleId as string) : null;
   const cycleId = cycleIdParam ?? await getActiveCycleId();
+  const advanced = req.query.advanced === "true";
+  const maxDepthParam = req.query.maxDepth ? parseInt(req.query.maxDepth as string) : undefined;
   const allSectors = await db.select().from(sectorsTable).orderBy(sectorsTable.sortOrder, sectorsTable.name);
 
-  // Get cycle total budget for root-sector correction
   let cycleTotalBudget: number | undefined;
   if (cycleId) {
     const cycleRow = await db.select({ totalBudget: budgetCyclesTable.totalBudget }).from(budgetCyclesTable).where(eq(budgetCyclesTable.id, cycleId)).limit(1);
@@ -106,16 +124,29 @@ router.get("/sectors/tree", requireAuth, async (req, res): Promise<void> => {
   }
 
   const scopeSectorId = getUserScopeId(user);
+
+  // Determine effective max depth
+  let effectiveMaxDepth: number | undefined;
+  if (!advanced) {
+    if (maxDepthParam !== undefined) {
+      effectiveMaxDepth = maxDepthParam;
+    } else if (scopeSectorId !== null) {
+      const userSector = allSectors.find((s: any) => s.id === scopeSectorId);
+      effectiveMaxDepth = userSector?.maxDepthVisible ?? 1;
+    }
+  }
+
   if (scopeSectorId !== null) {
-    // Return tree rooted at user's sector only
-    const sectorRow = allSectors.find(s => s.id === scopeSectorId) ?? allSectors[0];
-    const node = await buildTreeNode(sectorRow, cycleId, allSectors, cycleTotalBudget);
+    const sectorRow = allSectors.find((s: any) => s.id === scopeSectorId) ?? allSectors[0];
+    const node = await buildTreeNode(sectorRow, cycleId, allSectors, cycleTotalBudget, effectiveMaxDepth);
     res.json([node]);
     return;
   }
 
-  const roots = allSectors.filter(s => s.parentId === null);
-  const tree = await Promise.all(roots.map(r => buildTreeNode(r, cycleId, allSectors, cycleTotalBudget)));
+  const roots = allSectors.filter((s: any) => s.parentId === null);
+  const tree = await Promise.all(roots.map((r: any) =>
+    buildTreeNode(r, cycleId, allSectors, cycleTotalBudget, effectiveMaxDepth)
+  ));
   res.json(tree);
 });
 
@@ -123,10 +154,18 @@ router.get("/sectors/:sectorId/tree", requireAuth, async (req, res): Promise<voi
   const sectorId = parseInt(req.params['sectorId'] as string);
   const cycleIdParam = req.query.cycleId ? parseInt(req.query.cycleId as string) : null;
   const cycleId = cycleIdParam ?? await getActiveCycleId();
+  const advanced = req.query.advanced === "true";
+  const maxDepthParam = req.query.maxDepth ? parseInt(req.query.maxDepth as string) : undefined;
   const sector = await db.select().from(sectorsTable).where(eq(sectorsTable.id, sectorId)).limit(1);
   if (!sector[0]) { res.status(404).json({ error: "Not Found" }); return; }
   const allSectors = await db.select().from(sectorsTable).orderBy(sectorsTable.sortOrder, sectorsTable.name);
-  const node = await buildTreeNode(sector[0], cycleId, allSectors);
+
+  let effectiveMaxDepth: number | undefined;
+  if (!advanced) {
+    effectiveMaxDepth = maxDepthParam ?? sector[0].maxDepthVisible ?? undefined;
+  }
+
+  const node = await buildTreeNode(sector[0], cycleId, allSectors, undefined, effectiveMaxDepth);
   res.json(node);
 });
 
@@ -139,20 +178,25 @@ router.get("/sectors/:sectorId", requireAuth, async (req, res): Promise<void> =>
 });
 
 router.post("/sectors", requireAuth, requireRole("super_admin"), async (req, res): Promise<void> => {
-  const { name, code, parentId, responsibleUserId, sortOrder } = req.body;
+  const { name, code, parentId, responsibleUserId, sortOrder, maxDepthVisible } = req.body;
   if (!name || !code) { res.status(400).json({ error: "Bad Request", message: "Name and code required" }); return; }
   let depth = 0;
   if (parentId) {
     const parent = await db.select().from(sectorsTable).where(eq(sectorsTable.id, parentId)).limit(1);
     depth = (parent[0]?.depth ?? 0) + 1;
   }
-  const [created] = await db.insert(sectorsTable).values({ name, code, parentId: parentId || null, depth, responsibleUserId: responsibleUserId || null, sortOrder: sortOrder || 0, isActive: true }).returning();
+  const [created] = await db.insert(sectorsTable).values({
+    name, code, parentId: parentId || null, depth,
+    responsibleUserId: responsibleUserId || null,
+    sortOrder: sortOrder || 0, isActive: true,
+    maxDepthVisible: maxDepthVisible ?? 1,
+  }).returning();
   res.status(201).json(created);
 });
 
 router.put("/sectors/:sectorId", requireAuth, requireRole("super_admin"), async (req, res): Promise<void> => {
   const sectorId = parseInt(req.params['sectorId'] as string);
-  const { name, code, parentId, responsibleUserId, isActive, sortOrder } = req.body;
+  const { name, code, parentId, responsibleUserId, isActive, sortOrder, maxDepthVisible } = req.body;
   const updates: any = { updatedAt: new Date() };
   if (name != null) updates.name = name;
   if (code != null) updates.code = code;
@@ -160,6 +204,7 @@ router.put("/sectors/:sectorId", requireAuth, requireRole("super_admin"), async 
   if (responsibleUserId !== undefined) updates.responsibleUserId = responsibleUserId;
   if (isActive != null) updates.isActive = isActive;
   if (sortOrder != null) updates.sortOrder = sortOrder;
+  if (maxDepthVisible != null) updates.maxDepthVisible = maxDepthVisible;
   const [updated] = await db.update(sectorsTable).set(updates).where(eq(sectorsTable.id, sectorId)).returning();
   if (!updated) { res.status(404).json({ error: "Not Found" }); return; }
   res.json(updated);

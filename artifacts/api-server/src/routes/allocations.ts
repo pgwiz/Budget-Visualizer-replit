@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db, allocationsTable, revocationsTable, sectorsTable, usersTable, budgetCyclesTable, auditLogsTable } from "@workspace/db";
 import { eq, and, inArray } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
-import { getAvailableBalance, getSubtreeIds, getUserScopeId } from "../lib/budget-calc";
+import { getAvailableBalance, getSubtreeIds, getImmediateChildIds, getUserScopeId } from "../lib/budget-calc";
 
 const router = Router();
 
@@ -26,9 +26,14 @@ async function enrichAllocation(alloc: any) {
   return { ...alloc, amount: parseFloat(alloc.amount), fromSector, toSector, allocatedByUser, revocation };
 }
 
+/**
+ * GET /allocations
+ * Scoped to show only allocations involving the user's immediate children
+ * (or full subtree when ?advanced=true)
+ */
 router.get("/allocations", requireAuth, async (req, res): Promise<void> => {
   const user = (req as any).user;
-  const { cycleId, sectorId, status } = req.query;
+  const { cycleId, sectorId, status, advanced } = req.query;
   const conditions: any[] = [];
   if (cycleId) conditions.push(eq(allocationsTable.budgetCycleId, parseInt(cycleId as string)));
   if (sectorId) conditions.push(eq(allocationsTable.toSectorId, parseInt(sectorId as string)));
@@ -37,20 +42,53 @@ router.get("/allocations", requireAuth, async (req, res): Promise<void> => {
     ? await db.select().from(allocationsTable).where(and(...conditions)).orderBy(allocationsTable.createdAt)
     : await db.select().from(allocationsTable).orderBy(allocationsTable.createdAt);
 
-  // Scope: only show allocations involving the user's sector subtree
   const scopeSectorId = getUserScopeId(user);
   if (scopeSectorId !== null) {
-    const subtreeIds = await getSubtreeIds(scopeSectorId);
-    allocs = allocs.filter(a =>
-      subtreeIds.includes(a.toSectorId) ||
-      (a.fromSectorId !== null && subtreeIds.includes(a.fromSectorId))
-    );
+    const useAdvanced = advanced === "true";
+    if (useAdvanced) {
+      const subtreeIds = await getSubtreeIds(scopeSectorId);
+      allocs = allocs.filter((a: typeof allocs[number]) =>
+        subtreeIds.includes(a.toSectorId) ||
+        (a.fromSectorId !== null && subtreeIds.includes(a.fromSectorId))
+      );
+    } else {
+      const immediateChildIds = await getImmediateChildIds(scopeSectorId);
+      const visibleIds = [scopeSectorId, ...immediateChildIds];
+      allocs = allocs.filter((a: typeof allocs[number]) =>
+        visibleIds.includes(a.toSectorId) ||
+        (a.fromSectorId !== null && visibleIds.includes(a.fromSectorId))
+      );
+    }
   }
 
   const enriched = await Promise.all(allocs.map(enrichAllocation));
   res.json(enriched);
 });
 
+/**
+ * GET /allocations/targets
+ * Returns sectors the current user can allocate to (immediate children only)
+ */
+router.get("/allocations/targets", requireAuth, async (req, res): Promise<void> => {
+  const user = (req as any).user;
+  const scopeSectorId = getUserScopeId(user);
+
+  if (scopeSectorId === null) {
+    const roots = await db.select().from(sectorsTable).where(eq(sectorsTable.depth, 0)).orderBy(sectorsTable.sortOrder);
+    res.json(roots);
+    return;
+  }
+
+  const children = await db.select().from(sectorsTable)
+    .where(eq(sectorsTable.parentId, scopeSectorId))
+    .orderBy(sectorsTable.sortOrder, sectorsTable.name);
+  res.json(children);
+});
+
+/**
+ * POST /allocations
+ * Enforces hierarchical constraint: can only allocate to immediate children
+ */
 router.post("/allocations", requireAuth, async (req, res): Promise<void> => {
   const user = (req as any).user;
   const { budgetCycleId, fromSectorId, toSectorId, amount, comment } = req.body;
@@ -60,21 +98,48 @@ router.post("/allocations", requireAuth, async (req, res): Promise<void> => {
   if (amount <= 0) {
     res.status(400).json({ error: "Bad Request", message: "Amount must be positive" }); return;
   }
+
+  // Enforce hierarchical constraint: can only allocate to immediate children
+  const scopeSectorId = getUserScopeId(user);
+  if (scopeSectorId !== null) {
+    const immediateChildIds = await getImmediateChildIds(scopeSectorId);
+    if (!immediateChildIds.includes(toSectorId)) {
+      res.status(403).json({
+        error: "Forbidden",
+        message: "You can only allocate funds to your immediate sub-sectors",
+      });
+      return;
+    }
+  } else {
+    // Super admin: verify toSectorId is a child of fromSectorId (or root if no fromSectorId)
+    if (fromSectorId) {
+      const childIds = await getImmediateChildIds(fromSectorId);
+      if (!childIds.includes(toSectorId)) {
+        res.status(400).json({
+          error: "Bad Request",
+          message: "Target sector must be an immediate child of the source sector",
+        });
+        return;
+      }
+    }
+  }
+
   const cycle = await db.select().from(budgetCyclesTable).where(eq(budgetCyclesTable.id, budgetCycleId)).limit(1);
   if (!cycle[0] || !cycle[0].isActive) {
     res.status(400).json({ error: "Bad Request", message: "Budget cycle is not active" }); return;
   }
-  const available = await getAvailableBalance(fromSectorId || null, budgetCycleId);
+  const effectiveFrom = fromSectorId || scopeSectorId || null;
+  const available = await getAvailableBalance(effectiveFrom, budgetCycleId);
   if (amount > available) {
     res.status(400).json({ error: "Bad Request", message: `Amount exceeds available balance of KES ${available.toLocaleString()}` }); return;
   }
   const [created] = await db.insert(allocationsTable).values({
-    budgetCycleId, fromSectorId: fromSectorId || null, toSectorId,
+    budgetCycleId, fromSectorId: effectiveFrom, toSectorId,
     allocatedBy: user.id, amount: String(amount), comment: comment || null, status: "active",
   }).returning();
   await db.insert(auditLogsTable).values({
     userId: user.id, action: "allocated", subjectType: "allocation", subjectId: created.id,
-    meta: { amount, toSectorId, fromSectorId, cycleId: budgetCycleId },
+    meta: { amount, toSectorId, fromSectorId: effectiveFrom, cycleId: budgetCycleId },
     ipAddress: req.ip,
   });
   res.status(201).json(await enrichAllocation(created));

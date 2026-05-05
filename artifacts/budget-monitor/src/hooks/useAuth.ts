@@ -1,12 +1,26 @@
-import { useGetMe, getGetMeQueryKey } from '@workspace/api-client-react';
+import { getGetMeQueryKey, getMe } from '@workspace/api-client-react';
+import { useQuery } from '@tanstack/react-query';
 
-export function useAuth() {
-  const { data: user, isLoading, isError } = useGetMe({
-    query: {
-      retry: false,
-      staleTime: 30000,
-      queryKey: getGetMeQueryKey(),
-    }
+export function useAuth(enabled = true) {
+  const { data: user, isLoading, isError } = useQuery({
+    queryKey: getGetMeQueryKey(),
+    enabled,
+    retry: false,
+    staleTime: 30000,
+    queryFn: async () => {
+      try {
+        return await getMe();
+      } catch (error) {
+        const status =
+          typeof error === 'object' && error !== null && 'status' in error
+            ? Number((error as { status?: unknown }).status)
+            : undefined;
+
+        // Unauthenticated is a normal state for first app load and logout.
+        if (status === 401) return null;
+        throw error;
+      }
+    },
   });
 
   return {

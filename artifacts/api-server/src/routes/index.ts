@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router } from "express";
 import healthRouter from "./health";
 import authRouter from "./auth";
 import usersRouter from "./users";
@@ -11,8 +11,9 @@ import productsRouter from "./products";
 import purchaseOrdersRouter from "./purchase-orders";
 import sectorControlsRouter from "./sector-controls";
 import approvalLimitsRouter from "./approval-limits";
+import supabaseRouter from "./supabase";
 
-const router: IRouter = Router();
+const router = Router();
 
 router.use(healthRouter);
 router.use(authRouter);
@@ -26,5 +27,6 @@ router.use(productsRouter);
 router.use(purchaseOrdersRouter);
 router.use(sectorControlsRouter);
 router.use(approvalLimitsRouter);
+router.use(supabaseRouter);
 
 export default router;

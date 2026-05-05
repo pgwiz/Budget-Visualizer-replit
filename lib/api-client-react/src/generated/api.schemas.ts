@@ -120,12 +120,14 @@ export interface SectorTreeNode {
   code: string;
   depth: number;
   parentId?: number | null;
+  maxDepthVisible?: number;
   totalAllocated: number;
   totalRevoked: number;
   netAllocated: number;
   availableBalance: number;
   utilizationPct: number;
   responsibleUser?: User | null;
+  childCount?: number;
   children: SectorTreeNode[];
 }
 
@@ -135,6 +137,7 @@ export interface CreateSectorBody {
   parentId?: number | null;
   responsibleUserId?: number | null;
   sortOrder?: number;
+  maxDepthVisible?: number;
 }
 
 export interface UpdateSectorBody {
@@ -144,6 +147,7 @@ export interface UpdateSectorBody {
   responsibleUserId?: number | null;
   isActive?: boolean;
   sortOrder?: number;
+  maxDepthVisible?: number;
 }
 
 export interface BudgetCycle {
@@ -411,16 +415,21 @@ export interface SectorBreakdownItem {
 
 export type GetSectorTreeParams = {
   cycleId?: number;
+  maxDepth?: number;
+  advanced?: boolean;
 };
 
 export type GetSectorSubtreeParams = {
   cycleId?: number;
+  maxDepth?: number;
+  advanced?: boolean;
 };
 
 export type ListAllocationsParams = {
   cycleId?: number;
   sectorId?: number;
   status?: ListAllocationsStatus;
+  advanced?: boolean;
 };
 
 export type ListAllocationsStatus =
