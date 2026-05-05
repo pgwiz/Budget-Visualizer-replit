@@ -335,6 +335,7 @@ export default function LoginPage() {
   // Fetch demo users from API
   const [demoData, setDemoData] = useState<{ users: DemoUser[]; sectors: DemoSector[] } | null>(null);
   const [fetchLoading, setFetchLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     if (tab !== 'quick' || demoData) return;
@@ -342,11 +343,27 @@ export default function LoginPage() {
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => controller.abort(), 15000);
     setFetchLoading(true);
+    setFetchError(null);
 
     fetch('/api/auth/demo-users', { signal: controller.signal })
-      .then(res => res.json())
-      .then(data => setDemoData(data))
-      .catch(() => setDemoData({ users: [], sectors: [] }))
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`Server error: ${res.status} ${res.statusText}`);
+        }
+        return res.json();
+      })
+      .then(data => {
+        if (!data.users || !Array.isArray(data.users)) {
+          throw new Error('Invalid response format');
+        }
+        setDemoData(data);
+      })
+      .catch((err) => {
+        const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+        console.error('[Auth] Failed to load demo users:', errorMsg);
+        setFetchError(errorMsg);
+        setDemoData({ users: [], sectors: [] });
+      })
       .finally(() => {
         window.clearTimeout(timeoutId);
         setFetchLoading(false);
@@ -588,7 +605,7 @@ export default function LoginPage() {
 
                   {/* Error */}
                   <AnimatePresence>
-                    {loginMutation.isError && (
+                    {(loginMutation.isError || fetchError) && (
                       <motion.div
                         initial={{ opacity: 0, y: -6 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -596,7 +613,9 @@ export default function LoginPage() {
                         className="flex items-center gap-2 px-3 py-2 rounded-lg border border-rose-500/30 bg-rose-500/10 mb-3"
                       >
                         <AlertTriangle size={13} className="text-rose-400 shrink-0" />
-                        <p className="text-rose-400 text-xs">Login failed. Please try again.</p>
+                        <p className="text-rose-400 text-xs">
+                          {fetchError ? `Server Error: ${fetchError}` : 'Login failed. Please try again.'}
+                        </p>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -612,6 +631,7 @@ export default function LoginPage() {
                       <div className="text-center py-8">
                         <p className="text-white/30 text-xs">Unable to load quick-login users right now.</p>
                         <p className="text-white/20 text-[11px] mt-1">Use the Sign In tab, then retry Quick Login.</p>
+                        {fetchError && <p className="text-rose-400 text-[10px] mt-2">Error: {fetchError}</p>}
                       </div>
                     ) : filteredTree.length === 0 ? (
                       <div className="text-center py-8">

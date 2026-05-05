@@ -33,24 +33,30 @@ router.post("/auth/login", async (req, res): Promise<void> => {
 
 // Public endpoint for the prototype login page — returns users grouped by sector hierarchy
 router.get("/auth/demo-users", async (_req, res): Promise<void> => {
-  const users = await db
-    .select({
-      id: usersTable.id,
-      name: usersTable.name,
-      email: usersTable.email,
-      role: usersTable.role,
-      sectorId: usersTable.sectorId,
-    })
-    .from(usersTable)
-    .where(eq(usersTable.isActive, true))
-    .orderBy(usersTable.name);
+  try {
+    const users = await db
+      .select({
+        id: usersTable.id,
+        name: usersTable.name,
+        email: usersTable.email,
+        role: usersTable.role,
+        sectorId: usersTable.sectorId,
+      })
+      .from(usersTable)
+      .where(eq(usersTable.isActive, true))
+      .orderBy(usersTable.name);
 
-  const sectors = await db
-    .select({ id: sectorsTable.id, name: sectorsTable.name, code: sectorsTable.code, parentId: sectorsTable.parentId, depth: sectorsTable.depth })
-    .from(sectorsTable)
-    .orderBy(sectorsTable.depth, sectorsTable.name);
+    const sectors = await db
+      .select({ id: sectorsTable.id, name: sectorsTable.name, code: sectorsTable.code, parentId: sectorsTable.parentId, depth: sectorsTable.depth })
+      .from(sectorsTable)
+      .orderBy(sectorsTable.depth, sectorsTable.name);
 
-  res.json({ users, sectors });
+    res.set('Cache-Control', 'public, max-age=300'); // 5 minute cache for demo data
+    res.json({ users, sectors });
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    res.status(500).json({ error: "Failed to load demo users", message: err.message });
+  }
 });
 
 router.post("/auth/logout", (req, res): void => {
