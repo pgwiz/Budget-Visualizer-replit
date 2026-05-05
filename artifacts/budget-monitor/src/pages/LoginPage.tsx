@@ -378,7 +378,8 @@ export default function LoginPage() {
 
   const loginMutation = useLogin({
     mutation: {
-      onSuccess: () => {
+      onSuccess: (data) => {
+        queryClient.setQueryData(getGetMeQueryKey(), data.user);
         queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
         setLocation('/');
       },
