@@ -4,7 +4,7 @@ import pinoHttp from "pino-http";
 import cookieParser from "cookie-parser";
 import session from "express-session";
 import type { IncomingMessage, ServerResponse } from "http";
-import router from "./routes";
+import router from "./routes/index.js";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
