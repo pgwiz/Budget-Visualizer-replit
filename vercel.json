@@ -6,7 +6,8 @@
     "NODE_ENV": "production",
     "DATABASE_URL": "@database_url",
     "POSTGRES_URL": "@postgres_url",
-    "PRISMA_DATABASE_URL": "@prisma_database_url"
+    "PRISMA_DATABASE_URL": "@prisma_database_url",
+    "SESSION_SECRET": "@session_secret"
   },
   "functions": {
     "artifacts/api-server/dist/**": {

@@ -42,9 +42,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-const sessionSecret = process.env.SESSION_SECRET;
-if (!sessionSecret) {
-  throw new Error("SESSION_SECRET environment variable is required");
+const sessionSecret = process.env.SESSION_SECRET || "default-insecure-secret";
+if (!process.env.SESSION_SECRET) {
+  logger.warn("SESSION_SECRET environment variable not set - using insecure default. Set SESSION_SECRET in environment for production security.");
 }
 
 app.use(session({
