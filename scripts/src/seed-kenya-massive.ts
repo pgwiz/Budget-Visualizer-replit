@@ -3,17 +3,28 @@
  * with realistic sub-hierarchy and distributes 1 Trillion KES budget.
  *
  * Run: npx tsx scripts/src/seed-kenya-massive.ts
- * Requires DATABASE_URL env var.
+ * Requires DATABASE_URL (Prisma) or SUPABASEDB_STRING (Supabase) env var.
+ * Optional: DB_TYPE="supabase" or DB_TYPE="prisma" (default: prisma)
  */
 import pg from "pg";
 
-const DATABASE_URL = process.env.DATABASE_URL;
-if (!DATABASE_URL) {
-  console.error("DATABASE_URL is required");
+const dbType = process.env.DB_TYPE || "prisma";
+const connectionString = 
+  dbType === "supabase" 
+    ? process.env.SUPABASEDB_STRING 
+    : process.env.DATABASE_URL;
+
+if (!connectionString) {
+  console.error(
+    `${dbType === "supabase" ? "SUPABASEDB_STRING" : "DATABASE_URL"} is required. Set DB_TYPE to "prisma" or "supabase".`,
+  );
   process.exit(1);
 }
 
-const client = new pg.Client({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false } });
+const client = new pg.Client({ 
+  connectionString,
+  ssl: { rejectUnauthorized: false },
+});
 
 const PASSWORD_HASH = "9cb22b1717ab7084fd1731cc998f5451080807c85de33c24fe84ecf1ddcb791d";
 

@@ -11,6 +11,7 @@ import productsRouter from "./products";
 import purchaseOrdersRouter from "./purchase-orders";
 import sectorControlsRouter from "./sector-controls";
 import approvalLimitsRouter from "./approval-limits";
+import supabaseRouter from "./supabase";
 
 const router = Router();
 
@@ -26,5 +27,6 @@ router.use(productsRouter);
 router.use(purchaseOrdersRouter);
 router.use(sectorControlsRouter);
 router.use(approvalLimitsRouter);
+router.use(supabaseRouter);
 
 export default router;

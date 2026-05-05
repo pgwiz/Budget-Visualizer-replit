@@ -4,13 +4,26 @@ import * as schema from "./schema";
 
 const { Pool } = pg;
 
-if (!process.env.DATABASE_URL) {
+// Support both Prisma-hosted PostgreSQL and Supabase
+const dbType = process.env.DB_TYPE || "prisma";
+const connectionString = 
+  dbType === "supabase" 
+    ? process.env.SUPABASEDB_STRING 
+    : process.env.DATABASE_URL;
+
+if (!connectionString) {
   throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
+    `${dbType === "supabase" ? "SUPABASEDB_STRING" : "DATABASE_URL"} must be set. Did you forget to provision a database?`,
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+export const pool = new Pool({ 
+  connectionString,
+  ...(dbType === "supabase" && {
+    // Supabase SSL configuration
+    ssl: { rejectUnauthorized: false },
+  }),
+});
 export const db = drizzle(pool, { schema });
 
 export * from "./schema";
