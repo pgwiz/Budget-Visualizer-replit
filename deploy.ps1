@@ -323,6 +323,62 @@ function Deploy-Docker {
 # Health Checks
 ###############################################################################
 
+function Test-DbTypeConfig {
+    $rawDbType = $env:DB_TYPE
+
+    if ([string]::IsNullOrWhiteSpace($rawDbType)) {
+        Write-InfoLog "DB_TYPE not set for local pre-check (skipping local DB type validation)"
+        return $true
+    }
+
+    $normalized = $rawDbType.Trim().ToLowerInvariant()
+    if ($normalized -ne "prisma" -and $normalized -ne "supabase") {
+        $hint = if ($normalized -eq "superbase") { ' (did you mean "supabase"?)' } else { "" }
+        Write-ErrorLog "Invalid DB_TYPE=`"$rawDbType`". Allowed values: prisma, supabase$hint"
+        return $false
+    }
+
+    Write-SuccessLog "DB_TYPE validation passed: $normalized"
+    return $true
+}
+
+function Test-RemoteDbType {
+    $checkUrl = $env:DEPLOY_CHECK_URL
+    $expectedRaw = $env:EXPECTED_DB_TYPE
+
+    if ([string]::IsNullOrWhiteSpace($checkUrl) -or [string]::IsNullOrWhiteSpace($expectedRaw)) {
+        Write-InfoLog "Remote DB type validation skipped (set DEPLOY_CHECK_URL and EXPECTED_DB_TYPE to enable)"
+        return $true
+    }
+
+    $expected = $expectedRaw.Trim().ToLowerInvariant()
+    if ($expected -ne "prisma" -and $expected -ne "supabase") {
+        Write-ErrorLog "Invalid EXPECTED_DB_TYPE=`"$expectedRaw`". Allowed values: prisma, supabase"
+        return $false
+    }
+
+    $url = "$($checkUrl.TrimEnd('/'))/api/supabase/config"
+    Write-InfoLog "Validating remote DB type via: $url"
+
+    try {
+        $response = Invoke-RestMethod -Uri $url -TimeoutSec 30 -ErrorAction Stop
+    }
+    catch {
+        Write-ErrorLog "Failed to fetch remote DB config: $_"
+        return $false
+    }
+
+    $active = $response.active
+    $normalizedDbType = $response.normalizedDbType
+    if ($active -ne $expected -and $normalizedDbType -ne $expected) {
+        Write-ErrorLog "Remote DB type mismatch. Expected `"$expected`", got active=`"$active`", normalizedDbType=`"$normalizedDbType`""
+        return $false
+    }
+
+    Write-SuccessLog "Remote DB type check passed ($expected)"
+    return $true
+}
+
 function Test-HealthCheck {
     Write-InfoLog "Performing health checks..."
     
@@ -353,6 +409,10 @@ function Test-HealthCheck {
     catch {
         Write-WarningLog "Health check error: $_"
     }
+
+    if (-not (Test-RemoteDbType)) {
+        return $false
+    }
     
     return $true  # Non-blocking
 }
@@ -380,14 +440,20 @@ function Main {
             Write-ErrorLog "Failed to pull branch"
             exit 1
         }
+
+        # Step 3: Validate DB configuration
+        if (-not (Test-DbTypeConfig)) {
+            Write-ErrorLog "DB configuration validation failed"
+            exit 1
+        }
         
-        # Step 3: Build project
+        # Step 4: Build project
         if (-not (Build-Project)) {
             Write-ErrorLog "Build failed. Cannot proceed with deployment"
             exit 1
         }
         
-        # Step 4: Deploy based on target
+        # Step 5: Deploy based on target
         switch ($DeploymentTarget.ToLower()) {
             "vercel" {
                 Write-InfoLog "Target: Vercel (primary) → Render (fallback)"
@@ -430,7 +496,7 @@ function Main {
             }
         }
         
-        # Step 5: Health checks
+        # Step 6: Health checks
         if ($script:DeploymentSuccess) {
             Test-HealthCheck | Out-Null
             Write-SuccessLog "Deployment completed successfully"

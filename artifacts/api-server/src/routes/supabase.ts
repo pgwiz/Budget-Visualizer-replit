@@ -7,24 +7,56 @@ import { logger } from "../lib/logger";
 
 const router = Router();
 
+function normalizeDbType(rawValue: string | undefined) {
+  const raw = rawValue ?? "prisma";
+  const normalized = raw.trim().toLowerCase();
+  const isValid = normalized === "prisma" || normalized === "supabase";
+
+  return { raw, normalized, isValid };
+}
+
+function getConnectionHost(connectionString: string | undefined) {
+  if (!connectionString) return undefined;
+
+  try {
+    return new URL(connectionString.trim()).hostname;
+  } catch {
+    return undefined;
+  }
+}
+
+function getConnectionPort(connectionString: string | undefined) {
+  if (!connectionString) return undefined;
+
+  try {
+    const port = new URL(connectionString.trim()).port;
+    return port || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * GET /api/supabase/health
  * Health check for Supabase connection
  */
 router.get("/supabase/health", async (_req, res) => {
   try {
-    const dbType = process.env.DB_TYPE || "prisma";
-    const isSupabase = dbType === "supabase";
+    const dbType = normalizeDbType(process.env.DB_TYPE);
+    const isSupabase = dbType.normalized === "supabase";
+    const activeConnectionString = isSupabase
+      ? process.env.SUPABASEDB_STRING
+      : process.env.DATABASE_URL;
 
     res.json({
       status: "ok",
       database: {
-        type: dbType,
+        type: dbType.raw,
+        normalizedType: dbType.normalized,
+        validType: dbType.isValid,
         isSupabase,
-        host: isSupabase
-          ? process.env.SUPABASEDB_STRING?.split("@")[1]?.split(":")[0]
-          : process.env.DATABASE_URL?.split("@")[1]?.split(":")[0],
-        configured: !!process.env[dbType === "supabase" ? "SUPABASEDB_STRING" : "DATABASE_URL"],
+        host: getConnectionHost(activeConnectionString),
+        configured: !!activeConnectionString,
       },
     });
   } catch (err) {
@@ -38,24 +70,34 @@ router.get("/supabase/health", async (_req, res) => {
  * Get database configuration status (sanitized)
  */
 router.get("/supabase/config", (_req, res) => {
-  const dbType = process.env.DB_TYPE || "prisma";
-  const isSupabase = dbType === "supabase";
+  const dbType = normalizeDbType(process.env.DB_TYPE);
+  const isSupabase = dbType.normalized === "supabase";
+  const warnings: string[] = [];
+
+  if (!dbType.isValid) {
+    warnings.push(
+      `Invalid DB_TYPE "${dbType.raw}". Expected "prisma" or "supabase".`,
+    );
+  }
 
   res.json({
-    dbType,
+    dbType: dbType.raw,
+    normalizedDbType: dbType.normalized,
+    validDbType: dbType.isValid,
     isSupabase,
     connections: {
       prisma: {
         configured: !!process.env.DATABASE_URL,
-        host: process.env.DATABASE_URL?.split("@")[1]?.split(":")[0],
+        host: getConnectionHost(process.env.DATABASE_URL),
       },
       supabase: {
         configured: !!process.env.SUPABASEDB_STRING,
-        host: process.env.SUPABASEDB_STRING?.split("@")[1]?.split(":")[0],
-        port: process.env.SUPABASEDB_STRING?.split(":").pop()?.split("/")[0],
+        host: getConnectionHost(process.env.SUPABASEDB_STRING),
+        port: getConnectionPort(process.env.SUPABASEDB_STRING),
       },
     },
-    active: dbType,
+    active: dbType.normalized,
+    warnings,
   });
 });
 

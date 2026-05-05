@@ -249,6 +249,63 @@ deploy_docker() {
     return 0
 }
 
+validate_db_type_config() {
+    local db_type="${DB_TYPE:-}"
+
+    if [ -z "$db_type" ]; then
+        log_info "DB_TYPE not set for local pre-check (skipping local DB type validation)"
+        return 0
+    fi
+
+    local normalized
+    normalized="$(echo "$db_type" | tr '[:upper:]' '[:lower:]' | xargs)"
+
+    if [ "$normalized" != "prisma" ] && [ "$normalized" != "supabase" ]; then
+        local hint=""
+        if [ "$normalized" = "superbase" ]; then
+            hint=' (did you mean "supabase"?)'
+        fi
+        log_error "Invalid DB_TYPE=\"$db_type\". Allowed values: prisma, supabase$hint"
+        return 1
+    fi
+
+    log_success "DB_TYPE validation passed: $normalized"
+}
+
+validate_remote_db_type() {
+    local check_url="${DEPLOY_CHECK_URL:-}"
+    local expected_db_type="${EXPECTED_DB_TYPE:-}"
+
+    if [ -z "$check_url" ] || [ -z "$expected_db_type" ]; then
+        log_info "Remote DB type validation skipped (set DEPLOY_CHECK_URL and EXPECTED_DB_TYPE to enable)"
+        return 0
+    fi
+
+    local expected
+    expected="$(echo "$expected_db_type" | tr '[:upper:]' '[:lower:]' | xargs)"
+    if [ "$expected" != "prisma" ] && [ "$expected" != "supabase" ]; then
+        log_error "Invalid EXPECTED_DB_TYPE=\"$expected_db_type\". Allowed values: prisma, supabase"
+        return 1
+    fi
+
+    local url="${check_url%/}/api/supabase/config"
+    log_info "Validating remote DB type via: $url"
+
+    local response
+    response="$(curl -sS "$url" 2>/dev/null || true)"
+    if [ -z "$response" ]; then
+        log_error "Failed to fetch remote DB config from $url"
+        return 1
+    fi
+
+    if [[ "$response" != *"\"active\":\"$expected\""* && "$response" != *"\"normalizedDbType\":\"$expected\""* ]]; then
+        log_error "Remote DB type mismatch. Expected \"$expected\", got: $response"
+        return 1
+    fi
+
+    log_success "Remote DB type check passed ($expected)"
+}
+
 ###############################################################################
 # Health Checks
 ###############################################################################
@@ -274,6 +331,8 @@ health_check() {
         
         log_warning "API health check failed (may still be deploying)"
     fi
+
+    validate_remote_db_type
 }
 
 ###############################################################################
@@ -298,14 +357,20 @@ main() {
         log_error "Failed to pull branch"
         exit 1
     fi
+
+    # Step 3: Validate DB configuration
+    if ! validate_db_type_config; then
+        log_error "DB configuration validation failed"
+        exit 1
+    fi
     
-    # Step 3: Build project
+    # Step 4: Build project
     if ! build_project; then
         log_error "Build failed. Cannot proceed with deployment"
         exit 1
     fi
     
-    # Step 4: Deploy based on target
+    # Step 5: Deploy based on target
     case "${DEPLOYMENT_TARGET,,}" in
         vercel)
             log_info "Target: Vercel (primary) → Render (fallback)"
@@ -345,7 +410,7 @@ main() {
             ;;
     esac
     
-    # Step 5: Health checks
+    # Step 6: Health checks
     if [ "$DEPLOYMENT_SUCCESS" = true ]; then
         health_check || log_warning "Health checks inconclusive"
         log_success "Deployment completed successfully"

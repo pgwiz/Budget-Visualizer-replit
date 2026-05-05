@@ -4,12 +4,26 @@ import * as schema from "./schema";
 
 const { Pool } = pg;
 
+type DatabaseType = "prisma" | "supabase";
+
+function resolveDatabaseType(): DatabaseType {
+  const rawDbType = (process.env.DB_TYPE ?? "prisma").trim().toLowerCase();
+
+  if (rawDbType === "prisma" || rawDbType === "supabase") {
+    return rawDbType;
+  }
+
+  const hint =
+    rawDbType === "superbase" ? " Did you mean \"supabase\"?" : "";
+  throw new Error(
+    `Invalid DB_TYPE value: "${process.env.DB_TYPE}". Expected "prisma" or "supabase".${hint}`,
+  );
+}
+
 // Support both Prisma-hosted PostgreSQL and Supabase
-const dbType = process.env.DB_TYPE || "prisma";
-const connectionString = 
-  dbType === "supabase" 
-    ? process.env.SUPABASEDB_STRING 
-    : process.env.DATABASE_URL;
+const dbType = resolveDatabaseType();
+const connectionString =
+  dbType === "supabase" ? process.env.SUPABASEDB_STRING : process.env.DATABASE_URL;
 
 if (!connectionString) {
   throw new Error(
