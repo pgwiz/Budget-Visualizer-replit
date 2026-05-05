@@ -60,13 +60,21 @@ app.use(session({
 
 app.use("/api", router);
 
-// Serve budget-monitor frontend
-const budgetMonitorDir = path.join(__dirname, "../../budget-monitor/dist/public");
-app.use(express.static(budgetMonitorDir));
+// Serve budget-monitor frontend from dist
+// __dirname points to /app/artifacts/api-server/dist in production
+// So ../../budget-monitor/dist/public is /app/artifacts/budget-monitor/dist/public
+const distDir = path.resolve(__dirname, "../../budget-monitor/dist/public");
+app.use(express.static(distDir, { maxAge: "1d" }));
 
 // SPA fallback: serve index.html for client-side routing
 app.get("*", (req, res) => {
-  res.sendFile(path.join(budgetMonitorDir, "index.html"));
+  const indexPath = path.join(distDir, "index.html");
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      logger.error({ err }, "Failed to serve index.html");
+      res.status(500).send("Internal Server Error");
+    }
+  });
 });
 
 export default app;
