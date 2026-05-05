@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "buildCommand": "pnpm run build",
+  "outputDirectory": "./artifacts/api-server/dist",
+  "env": {
+    "NODE_ENV": "production",
+    "DATABASE_URL": "@database_url",
+    "POSTGRES_URL": "@postgres_url",
+    "PRISMA_DATABASE_URL": "@prisma_database_url"
+  },
+  "functions": {
+    "artifacts/api-server/dist/**": {
+      "runtime": "nodejs20.x"
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "artifacts/api-server/dist/index.mjs"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "artifacts/budget-monitor/dist/public/index.html"
+    }
+  ]
+}
