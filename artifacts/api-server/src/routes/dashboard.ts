@@ -10,6 +10,28 @@ import {
 
 const router = Router();
 
+// Simple in-memory cache for dashboard summary (5 minute TTL)
+const summaryCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+function getCacheKey(userId: number, cycleId: number | null): string {
+  return `summary:${userId}:${cycleId}`;
+}
+
+function getFromCache(key: string): any | null {
+  const entry = summaryCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > CACHE_TTL) {
+    summaryCache.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+
+function setInCache(key: string, data: any): void {
+  summaryCache.set(key, { data, timestamp: Date.now() });
+}
+
 /** Returns IDs of all top-level (root) sectors — these are the "national pool" sources */
 async function getRootSectorIds(): Promise<number[]> {
   const roots = await db.select({ id: sectorsTable.id }).from(sectorsTable).where(sql`${sectorsTable.parentId} IS NULL`);
@@ -36,6 +58,15 @@ router.get("/dashboard/summary", requireAuth, async (req, res): Promise<void> =>
     : await getActiveCycle();
 
   const cycleId = cycle?.id ?? null;
+  
+  // Check cache before doing expensive queries
+  const cacheKey = getCacheKey(user.id, cycleId);
+  const cachedResult = getFromCache(cacheKey);
+  if (cachedResult) {
+    res.json(cachedResult);
+    return;
+  }
+
   const scopeSectorId = getUserScopeId(user); // null = global
 
   // Detect if user's sector is a root sector (no parent → budget comes from cycle total)
@@ -120,11 +151,16 @@ router.get("/dashboard/summary", requireAuth, async (req, res): Promise<void> =>
 
   const enrichedCycle = cycle ? { ...cycle, totalBudget, totalAllocated, totalRevoked, availableBalance, utilizationPct } : null;
 
-  res.json({
+  const result = {
     role: user.role, cycle: enrichedCycle, totalBudget, totalAllocated, totalRevoked,
     availableBalance, utilizationPct, sectorCount, activeAllocations, topSectors,
     myAllocated, myDistributed, myAvailable,
-  });
+  };
+
+  // Cache the result for 5 minutes
+  setInCache(cacheKey, result);
+  
+  res.json(result);
 });
 
 // ── Utilization Chart ─────────────────────────────────────────────────────────
