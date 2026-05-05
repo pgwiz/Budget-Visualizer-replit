@@ -66,8 +66,8 @@ app.use("/api", router);
 const distDir = path.resolve(__dirname, "../../budget-monitor/dist/public");
 app.use(express.static(distDir, { maxAge: "1d" }));
 
-// SPA fallback: serve index.html for client-side routing
-app.get("*", (req, res) => {
+// SPA fallback: serve index.html for non-API routes (for client-side routing)
+app.get(/^(?!\/api)/, (req, res) => {
   const indexPath = path.join(distDir, "index.html");
   res.sendFile(indexPath, (err) => {
     if (err) {
