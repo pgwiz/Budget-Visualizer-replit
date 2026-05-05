@@ -10,7 +10,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: DB_TYPE
-        value: prisma
+        value: supabase
       - key: DATABASE_URL
         sync: false
       - key: POSTGRES_URL
