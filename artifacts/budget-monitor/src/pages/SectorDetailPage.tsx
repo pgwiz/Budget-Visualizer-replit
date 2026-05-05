@@ -49,7 +49,7 @@ export default function SectorDetailPage({ id }: { id: string }) {
 
   // API returns a single root SectorTreeNode; its children are the sub-sectors
   const subtreeChildren: import('@workspace/api-client-react').SectorTreeNode[] =
-    subtreeRoot?.children ?? [];
+    (subtreeRoot?.children ?? []).filter(Boolean);
 
   const isLoading = sectorLoading || subtreeLoading;
 
@@ -74,7 +74,7 @@ export default function SectorDetailPage({ id }: { id: string }) {
   // Use clamped values for charts (Recharts can't render negative slices/bars)
   const allocatedDisplay = Math.max(0, allocated);
   const availableDisplay = Math.max(0, available);
-  const total = allocatedDisplay + availableDisplay;
+  const total = allocatedDisplay + availableDisplay || 1;
 
   /* ── Recent allocations in/out ── */
   const recentAllocs = (allAllocations ?? []).slice(0, 8);

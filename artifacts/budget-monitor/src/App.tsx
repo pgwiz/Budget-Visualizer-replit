@@ -22,8 +22,10 @@ import HierarchyDesignerPage from "@/pages/HierarchyDesignerPage";
 import NotFound from "@/pages/not-found";
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { isLoading, isLoggedIn } = useAuth();
   const [location] = useLocation();
+  const isLoginPage = location === "/login";
+  // Only query /api/auth/me on protected pages (not on login)
+  const { isLoading, isLoggedIn } = useAuth(!isLoginPage);
 
   if (isLoading) {
     return (
@@ -33,11 +35,11 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!isLoggedIn && location !== "/login") {
+  if (!isLoggedIn && !isLoginPage) {
     return <Redirect to="/login" />;
   }
 
-  if (isLoggedIn && location === "/login") {
+  if (isLoggedIn && isLoginPage) {
     return <Redirect to="/" />;
   }
 
