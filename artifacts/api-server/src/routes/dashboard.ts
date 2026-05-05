@@ -2,6 +2,8 @@ import { Router } from "express";
 import { db, budgetCyclesTable, sectorsTable, allocationsTable, usersTable, auditLogsTable } from "@workspace/db";
 import { eq, and, inArray, sql, desc, gte } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
+import { logger } from "../lib/logger";
+import { PerformanceTracker } from "../lib/performance";
 import {
   getTotalAllocated, getTotalRevoked, getNetAllocated,
   getTotalAllocatedFrom, getAvailableBalance, getUtilizationPct,
@@ -51,131 +53,174 @@ async function getActiveCycle() {
 // ── Summary ──────────────────────────────────────────────────────────────────
 
 router.get("/dashboard/summary", requireAuth, async (req, res): Promise<void> => {
+  const perf = new PerformanceTracker((req as any).id);
   const user = (req as any).user;
   const cycleIdParam = req.query.cycleId ? parseInt(req.query.cycleId as string) : null;
-  const cycle = cycleIdParam
-    ? (await db.select().from(budgetCyclesTable).where(eq(budgetCyclesTable.id, cycleIdParam)).limit(1))[0]
-    : await getActiveCycle();
-
-  const cycleId = cycle?.id ?? null;
   
-  // Check cache before doing expensive queries
-  const cacheKey = getCacheKey(user.id, cycleId);
-  const cachedResult = getFromCache(cacheKey);
-  if (cachedResult) {
-    res.json(cachedResult);
-    return;
-  }
-
-  const scopeSectorId = getUserScopeId(user); // null = global
-
-  // Detect if user's sector is a root sector (no parent → budget comes from cycle total)
-  const userSectorRow = scopeSectorId
-    ? (await db.select({ parentId: sectorsTable.parentId }).from(sectorsTable).where(eq(sectorsTable.id, scopeSectorId)).limit(1))[0]
-    : null;
-  const isRootSector = userSectorRow ? !userSectorRow.parentId : false;
-
-  let totalBudget = 0, totalAllocated = 0, totalRevoked = 0, availableBalance = 0, utilizationPct = 0;
-
-  if (cycleId) {
-    if (scopeSectorId === null) {
-      // Global (super_admin): cycle budget pool, allocations from root sectors only (no double-count)
-      totalBudget = cycle ? parseFloat(cycle.totalBudget) : 0;
-      const rootIds = await getRootSectorIds();
-      const allocResult = await db
-        .select({ total: sql<string>`COALESCE(SUM(amount), 0)` })
-        .from(allocationsTable)
-        .where(and(eq(allocationsTable.budgetCycleId, cycleId), rootIds.length ? inArray(allocationsTable.fromSectorId, rootIds) : sql`false`, inArray(allocationsTable.status, ["active", "pending", "exhausted"])));
-      const revResult = await db
-        .select({ total: sql<string>`COALESCE(SUM(amount), 0)` })
-        .from(allocationsTable)
-        .where(and(eq(allocationsTable.budgetCycleId, cycleId), rootIds.length ? inArray(allocationsTable.fromSectorId, rootIds) : sql`false`, eq(allocationsTable.status, "revoked")));
-      totalAllocated = parseFloat(allocResult[0]?.total ?? "0");
-      totalRevoked   = parseFloat(revResult[0]?.total ?? "0");
-      availableBalance = totalBudget - totalAllocated;
-      utilizationPct   = totalBudget > 0 ? Math.min(100, (totalAllocated / totalBudget) * 100) : 0;
-    } else if (isRootSector) {
-      // Root sector (e.g. National Government): budget = cycle total; no incoming allocations
-      totalBudget      = cycle ? parseFloat(cycle.totalBudget) : 0;
-      totalAllocated   = await getTotalAllocatedFrom(scopeSectorId, cycleId);
-      availableBalance = totalBudget - totalAllocated;
-      utilizationPct   = totalBudget > 0 ? Math.min(100, (totalAllocated / totalBudget) * 100) : 0;
-    } else {
-      // Scoped non-root: budget = what was net-allocated TO this sector
-      // Run all queries in parallel
-      const [netAlloc, totalAlloc, availBal, utilizPct] = await Promise.all([
-        getNetAllocated(scopeSectorId, cycleId),
-        getTotalAllocatedFrom(scopeSectorId, cycleId),
-        getAvailableBalance(scopeSectorId, cycleId),
-        getUtilizationPct(scopeSectorId, cycleId),
-      ]);
-      totalBudget      = netAlloc;
-      totalAllocated   = totalAlloc;
-      availableBalance = availBal;
-      utilizationPct   = utilizPct;
+  logger.info({ userId: user.id, cycleIdParam }, "[PERF] /dashboard/summary request started");
+  
+  try {
+    // Check cache first
+    const cacheKey = getCacheKey(user.id, cycleIdParam ?? null);
+    const cachedResult = getFromCache(cacheKey);
+    if (cachedResult) {
+      logger.info({ userId: user.id, cacheKey }, "[PERF] Cache hit for dashboard summary");
+      res.set('X-Cache', 'HIT');
+      res.json(cachedResult);
+      return;
     }
+    res.set('X-Cache', 'MISS');
+
+    // Get active cycle
+    const endCycleQuery = perf.recordQueryStart("getActiveCycle");
+    const cycle = cycleIdParam
+      ? (await db.select().from(budgetCyclesTable).where(eq(budgetCyclesTable.id, cycleIdParam)).limit(1))[0]
+      : await getActiveCycle();
+    endCycleQuery();
+
+    const cycleId = cycle?.id ?? null;
+    const scopeSectorId = getUserScopeId(user); // null = global
+
+    // Get user sector info
+    const endUserSectorQuery = perf.recordQueryStart("getUserSectorInfo");
+    const userSectorRow = scopeSectorId
+      ? (await db.select({ parentId: sectorsTable.parentId }).from(sectorsTable).where(eq(sectorsTable.id, scopeSectorId)).limit(1))[0]
+      : null;
+    endUserSectorQuery();
+    const isRootSector = userSectorRow ? !userSectorRow.parentId : false;
+
+    let totalBudget = 0, totalAllocated = 0, totalRevoked = 0, availableBalance = 0, utilizationPct = 0;
+
+    if (cycleId) {
+      if (scopeSectorId === null) {
+        // Global (super_admin): cycle budget pool
+        totalBudget = cycle ? parseFloat(cycle.totalBudget) : 0;
+        
+        const endRootIds = perf.recordQueryStart("getRootSectorIds");
+        const rootIds = await getRootSectorIds();
+        endRootIds();
+        
+        const endAllocQuery = perf.recordQueryStart("getTotalAllocated_global");
+        const allocResult = await db
+          .select({ total: sql<string>`COALESCE(SUM(amount), 0)` })
+          .from(allocationsTable)
+          .where(and(eq(allocationsTable.budgetCycleId, cycleId), rootIds.length ? inArray(allocationsTable.fromSectorId, rootIds) : sql`false`, inArray(allocationsTable.status, ["active", "pending", "exhausted"])));
+        endAllocQuery();
+        
+        const endRevQuery = perf.recordQueryStart("getTotalRevoked_global");
+        const revResult = await db
+          .select({ total: sql<string>`COALESCE(SUM(amount), 0)` })
+          .from(allocationsTable)
+          .where(and(eq(allocationsTable.budgetCycleId, cycleId), rootIds.length ? inArray(allocationsTable.fromSectorId, rootIds) : sql`false`, eq(allocationsTable.status, "revoked")));
+        endRevQuery();
+        
+        totalAllocated = parseFloat(allocResult[0]?.total ?? "0");
+        totalRevoked   = parseFloat(revResult[0]?.total ?? "0");
+        availableBalance = totalBudget - totalAllocated;
+        utilizationPct   = totalBudget > 0 ? Math.min(100, (totalAllocated / totalBudget) * 100) : 0;
+      } else if (isRootSector) {
+        // Root sector
+        totalBudget      = cycle ? parseFloat(cycle.totalBudget) : 0;
+        
+        const endAllocFromQuery = perf.recordQueryStart("getTotalAllocatedFrom_root");
+        totalAllocated   = await getTotalAllocatedFrom(scopeSectorId, cycleId);
+        endAllocFromQuery();
+        
+        availableBalance = totalBudget - totalAllocated;
+        utilizationPct   = totalBudget > 0 ? Math.min(100, (totalAllocated / totalBudget) * 100) : 0;
+      } else {
+        // Scoped non-root: run all queries in parallel
+        const endScopedQuery = perf.recordQueryStart("getScopedBudgetMetrics");
+        const [netAlloc, totalAlloc, availBal, utilizPct] = await Promise.all([
+          getNetAllocated(scopeSectorId, cycleId),
+          getTotalAllocatedFrom(scopeSectorId, cycleId),
+          getAvailableBalance(scopeSectorId, cycleId),
+          getUtilizationPct(scopeSectorId, cycleId),
+        ]);
+        endScopedQuery();
+        
+        totalBudget      = netAlloc;
+        totalAllocated   = totalAlloc;
+        availableBalance = availBal;
+        utilizationPct   = utilizPct;
+      }
+    }
+
+    // Get sector counts and active allocations
+    let sectorCount = 0, activeAllocations = 0;
+    const endCountsQuery = perf.recordQueryStart("getSectorCounts");
+    if (scopeSectorId === null) {
+      sectorCount = Number((await db.select({ c: sql<number>`COUNT(*)` }).from(sectorsTable))[0]?.c ?? 0);
+      activeAllocations = cycleId
+        ? Number((await db.select({ c: sql<number>`COUNT(*)` }).from(allocationsTable)
+            .where(and(eq(allocationsTable.budgetCycleId, cycleId), eq(allocationsTable.status, "active"))))[0]?.c ?? 0)
+        : 0;
+    } else {
+      const endSubtreeQuery = perf.recordQueryStart("getSubtreeIds");
+      const subtreeIds = await getSubtreeIds(scopeSectorId);
+      endSubtreeQuery();
+      
+      sectorCount = subtreeIds.length;
+      activeAllocations = cycleId
+        ? Number((await db.select({ c: sql<number>`COUNT(*)` }).from(allocationsTable)
+            .where(and(eq(allocationsTable.budgetCycleId, cycleId), eq(allocationsTable.status, "active"), inArray(allocationsTable.toSectorId, subtreeIds))))[0]?.c ?? 0)
+        : 0;
+    }
+    endCountsQuery();
+
+    // Get child sectors
+    const endChildSectorsQuery = perf.recordQueryStart("getChildSectors");
+    const childSectors = scopeSectorId === null
+      ? await db.select().from(sectorsTable).where(eq(sectorsTable.depth, 1)).limit(10)
+      : await db.select().from(sectorsTable).where(eq(sectorsTable.parentId, scopeSectorId));
+    endChildSectorsQuery();
+
+    // Process top sectors in parallel
+    const endTopSectorsQuery = perf.recordQueryStart("processTopSectors");
+    const topSectors = await Promise.all(childSectors.map(async s => {
+      const [ta, tr, avail, pct, childrenResult] = await Promise.all([
+        cycleId ? getTotalAllocated(s.id, cycleId) : Promise.resolve(0),
+        cycleId ? getTotalRevoked(s.id, cycleId) : Promise.resolve(0),
+        cycleId ? getAvailableBalance(s.id, cycleId) : Promise.resolve(0),
+        cycleId ? getUtilizationPct(s.id, cycleId) : Promise.resolve(0),
+        db.select({ id: sectorsTable.id }).from(sectorsTable).where(eq(sectorsTable.parentId, s.id)),
+      ]);
+      return { ...s, totalAllocated: ta, totalRevoked: tr, netAllocated: ta - tr, availableBalance: avail, utilizationPct: pct, childCount: childrenResult.length, responsibleUser: null, parent: null };
+    }));
+    endTopSectorsQuery();
+
+    // Get personal sector stats
+    let myAllocated = null, myDistributed = null, myAvailable = null;
+    if (scopeSectorId && cycleId) {
+      const endPersonalQuery = perf.recordQueryStart("getPersonalSectorStats");
+      const allocPromise = isRootSector ? Promise.resolve(cycle ? parseFloat(cycle.totalBudget) : 0) : getNetAllocated(scopeSectorId, cycleId);
+      const distributedPromise = getTotalAllocatedFrom(scopeSectorId, cycleId);
+      
+      myAllocated    = await allocPromise;
+      myDistributed  = await distributedPromise;
+      myAvailable    = isRootSector ? totalBudget - (myDistributed ?? 0) : await getAvailableBalance(scopeSectorId, cycleId);
+      endPersonalQuery();
+    }
+
+    const enrichedCycle = cycle ? { ...cycle, totalBudget, totalAllocated, totalRevoked, availableBalance, utilizationPct } : null;
+
+    const result = {
+      role: user.role, cycle: enrichedCycle, totalBudget, totalAllocated, totalRevoked,
+      availableBalance, utilizationPct, sectorCount, activeAllocations, topSectors,
+      myAllocated, myDistributed, myAvailable,
+    };
+
+    // Cache result
+    res.set('Cache-Control', 'private, max-age=300');
+    res.set('Vary', 'Cookie');
+    setInCache(cacheKey, result);
+    
+    perf.log("/dashboard/summary", 200);
+    res.json(result);
+  } catch (error) {
+    perf.logError("/dashboard/summary", error as Error, 500);
+    throw error;
   }
-
-  // Sector count and active allocations — scoped to subtree
-  let sectorCount = 0, activeAllocations = 0;
-  if (scopeSectorId === null) {
-    sectorCount = Number((await db.select({ c: sql<number>`COUNT(*)` }).from(sectorsTable))[0]?.c ?? 0);
-    activeAllocations = cycleId
-      ? Number((await db.select({ c: sql<number>`COUNT(*)` }).from(allocationsTable)
-          .where(and(eq(allocationsTable.budgetCycleId, cycleId), eq(allocationsTable.status, "active"))))[0]?.c ?? 0)
-      : 0;
-  } else {
-    const subtreeIds = await getSubtreeIds(scopeSectorId);
-    sectorCount = subtreeIds.length;
-    activeAllocations = cycleId
-      ? Number((await db.select({ c: sql<number>`COUNT(*)` }).from(allocationsTable)
-          .where(and(eq(allocationsTable.budgetCycleId, cycleId), eq(allocationsTable.status, "active"), inArray(allocationsTable.toSectorId, subtreeIds))))[0]?.c ?? 0)
-      : 0;
-  }
-
-  // Top sectors: global → depth=1 children of root; scoped → direct children of user's sector
-  const childSectors = scopeSectorId === null
-    ? await db.select().from(sectorsTable).where(eq(sectorsTable.depth, 1)).limit(10)
-    : await db.select().from(sectorsTable).where(eq(sectorsTable.parentId, scopeSectorId));
-
-  const topSectors = await Promise.all(childSectors.map(async s => {
-    // Run all budget calculations in parallel for this sector
-    const [ta, tr, avail, pct, childrenResult] = await Promise.all([
-      cycleId ? getTotalAllocated(s.id, cycleId) : Promise.resolve(0),
-      cycleId ? getTotalRevoked(s.id, cycleId) : Promise.resolve(0),
-      cycleId ? getAvailableBalance(s.id, cycleId) : Promise.resolve(0),
-      cycleId ? getUtilizationPct(s.id, cycleId) : Promise.resolve(0),
-      db.select({ id: sectorsTable.id }).from(sectorsTable).where(eq(sectorsTable.parentId, s.id)),
-    ]);
-    return { ...s, totalAllocated: ta, totalRevoked: tr, netAllocated: ta - tr, availableBalance: avail, utilizationPct: pct, childCount: childrenResult.length, responsibleUser: null, parent: null };
-  }));
-
-  // My personal sector stats (always shown when sector is set)
-  const myAllocated    = scopeSectorId && cycleId
-    ? (isRootSector ? (cycle ? parseFloat(cycle.totalBudget) : 0) : await getNetAllocated(scopeSectorId, cycleId))
-    : null;
-  const myDistributed  = scopeSectorId && cycleId ? await getTotalAllocatedFrom(scopeSectorId, cycleId) : null;
-  const myAvailable    = scopeSectorId && cycleId
-    ? (isRootSector ? totalBudget - (myDistributed ?? 0) : await getAvailableBalance(scopeSectorId, cycleId))
-    : null;
-
-  const enrichedCycle = cycle ? { ...cycle, totalBudget, totalAllocated, totalRevoked, availableBalance, utilizationPct } : null;
-
-  const result = {
-    role: user.role, cycle: enrichedCycle, totalBudget, totalAllocated, totalRevoked,
-    availableBalance, utilizationPct, sectorCount, activeAllocations, topSectors,
-    myAllocated, myDistributed, myAvailable,
-  };
-
-  // Cache the result for 5 minutes with HTTP headers
-  // Browser and CDN (Cloudflare) will cache this response
-  res.set('Cache-Control', 'private, max-age=300'); // 5 minutes, private to user
-  res.set('Vary', 'Cookie'); // Cache varies by user session
-  
-  // Also keep in-memory cache for same-process hits
-  setInCache(cacheKey, result);
-  
-  res.json(result);
 });
 
 // ── Utilization Chart ─────────────────────────────────────────────────────────

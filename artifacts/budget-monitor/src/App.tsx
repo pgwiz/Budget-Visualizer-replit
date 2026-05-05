@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { queryClient } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
+import { usePerformanceMonitoring } from "@/hooks/usePerformanceMonitoring";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
@@ -26,6 +27,8 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const isLoginPage = location === "/login";
   // Only query /api/auth/me on protected pages (not on login)
   const { isLoading, isLoggedIn } = useAuth(!isLoginPage);
+  // Monitor performance
+  usePerformanceMonitoring();
 
   if (isLoading) {
     return (

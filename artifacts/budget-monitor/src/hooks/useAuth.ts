@@ -1,5 +1,6 @@
 import { getGetMeQueryKey, getMe } from '@workspace/api-client-react';
 import { useQuery } from '@tanstack/react-query';
+import { withPerformanceTracking } from './usePerformanceMonitoring';
 
 export function useAuth(enabled = true) {
   const { data: user, isLoading, isError } = useQuery({
@@ -7,7 +8,7 @@ export function useAuth(enabled = true) {
     enabled,
     retry: false,
     staleTime: 30000,
-    queryFn: async () => {
+    queryFn: withPerformanceTracking(['auth', 'me'], async () => {
       try {
         return await getMe();
       } catch (error) {
@@ -20,7 +21,7 @@ export function useAuth(enabled = true) {
         if (status === 401) return null;
         throw error;
       }
-    },
+    }),
   });
 
   return {
