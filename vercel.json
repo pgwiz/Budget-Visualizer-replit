@@ -4,7 +4,7 @@
   "outputDirectory": "./artifacts/api-server/dist",
   "env": {
     "NODE_ENV": "production",
-    "DATABASE_URL": "@DATABASE_URL",
+    "DATABASE_URL": "@DATABASE_url",
     "POSTGRES_URL": "@POSTGRES_URL",
     "PRISMA_DATABASE_URL": "@PRISMA_DATABASE_URL",
     "SESSION_SECRET": "@SESSION_SECRET"
