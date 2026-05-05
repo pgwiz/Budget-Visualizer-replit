@@ -7,37 +7,22 @@ const router = Router();
 
 router.post("/auth/login", async (req, res): Promise<void> => {
   try {
-    console.log("Login endpoint called");
-    console.log("Request body:", req.body);
-    console.log("Session exists:", !!req.session);
-    
     const { email, password } = req.body;
     if (!email || !password) {
-      console.log("Missing email or password");
       res.status(400).json({ error: "Bad Request", message: "Email and password required" });
       return;
     }
-    
-    console.log("Querying user with email:", email);
     const users = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
     const user = users[0];
-    console.log("User found:", !!user);
-    
     if (!user || !verifyPassword(password, user.passwordHash)) {
-      console.log("Invalid credentials - user:", !!user, "password valid:", user ? verifyPassword(password, user.passwordHash) : false);
       res.status(401).json({ error: "Unauthorized", message: "Invalid email or password" });
       return;
     }
-    
     if (!user.isActive) {
-      console.log("User inactive");
       res.status(401).json({ error: "Unauthorized", message: "Account is inactive" });
       return;
     }
-    
-    console.log("Setting session userId:", user.id);
     (req as any).session.userId = user.id;
-    
     let sector = null;
     if (user.sectorId) {
       try {
@@ -48,14 +33,11 @@ router.post("/auth/login", async (req, res): Promise<void> => {
         sector = null;
       }
     }
-    
     const { passwordHash: _, ...safeUser } = user;
-    console.log("Login successful for user:", email);
     res.json({ user: { ...safeUser, sector } });
   } catch (err) {
     console.error("Login error:", err);
-    console.error("Error stack:", (err as Error).stack);
-    res.status(500).json({ error: "Internal Server Error", message: String(err) });
+    res.status(500).json({ error: "Internal Server Error", message: "An error occurred during login" });
   }
 });
 
@@ -105,18 +87,6 @@ router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
   }
   const { passwordHash: _, ...safeUser } = user;
   res.json({ ...safeUser, sector });
-});
-
-// Diagnostics endpoint (development only)
-router.get("/auth/diagnostics", (_req, res): Promise<void> | void => {
-  const diagnostics = {
-    db_type: process.env.DB_TYPE || "(not set - defaults to prisma)",
-    has_supabasedb_string: !!process.env.SUPABASEDB_STRING,
-    has_database_url: !!process.env.DATABASE_URL,
-    supabasedb_string_preview: process.env.SUPABASEDB_STRING ? process.env.SUPABASEDB_STRING.substring(0, 30) + "..." : null,
-    node_env: process.env.NODE_ENV,
-  };
-  res.json(diagnostics);
 });
 
 export default router;
