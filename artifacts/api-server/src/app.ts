@@ -64,14 +64,16 @@ app.use("/api", router);
 // __dirname points to /app/artifacts/api-server/dist in production
 // So ../../budget-monitor/dist/public is /app/artifacts/budget-monitor/dist/public
 const distDir = path.resolve(__dirname, "../../budget-monitor/dist/public");
+logger.info({ distDir, dirname: __dirname }, "Static file directory resolved");
 app.use(express.static(distDir, { maxAge: "1d" }));
 
 // SPA fallback: serve index.html for non-API routes (for client-side routing)
 app.get(/^(?!\/api)/, (req, res) => {
   const indexPath = path.join(distDir, "index.html");
+  logger.debug({ path: req.path, indexPath }, "SPA fallback - serving index.html");
   res.sendFile(indexPath, (err) => {
     if (err) {
-      logger.error({ err }, "Failed to serve index.html");
+      logger.error({ err, indexPath }, "Failed to serve index.html");
       res.status(500).send("Internal Server Error");
     }
   });
