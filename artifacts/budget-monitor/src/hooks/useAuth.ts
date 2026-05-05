@@ -1,9 +1,10 @@
 import { getGetMeQueryKey, getMe } from '@workspace/api-client-react';
 import { useQuery } from '@tanstack/react-query';
 
-export function useAuth() {
+export function useAuth(enabled = true) {
   const { data: user, isLoading, isError } = useQuery({
     queryKey: getGetMeQueryKey(),
+    enabled,
     retry: false,
     staleTime: 30000,
     queryFn: async () => {
