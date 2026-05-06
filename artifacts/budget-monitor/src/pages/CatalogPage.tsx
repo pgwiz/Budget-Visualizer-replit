@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import {
   Package, Plus, Search, Edit2, Trash2, X, Check,
-  ChevronDown, ChevronRight, Tag,
+  ChevronDown, ChevronRight, Tag, ShieldCheck, Lock,
 } from 'lucide-react';
 import type { Product } from '@workspace/api-client-react';
 
@@ -185,6 +185,19 @@ export default function CatalogPage() {
           </button>
         )}
       </div>
+
+      {/* RBAC notice for non-admins */}
+      {!canEdit && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/4 border border-white/8 text-sm text-white/50">
+          <Lock size={14} className="text-amber-400/70 shrink-0" />
+          <span>
+            This catalog is <span className="text-white/70 font-medium">read-only</span> for your role.
+            Only <span className="text-amber-400/80 font-medium">System Administrators</span> can add,
+            edit, or remove products.
+          </span>
+          <ShieldCheck size={14} className="text-amber-400/50 shrink-0 ml-auto" />
+        </div>
+      )}
 
       {/* Search */}
       <div className="relative">
