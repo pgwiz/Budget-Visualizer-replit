@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "hello": "tsx ./src/hello.ts",
+    "seed:pos": "psql $DATABASE_URL -f ./src/seed-purchase-orders.sql",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
