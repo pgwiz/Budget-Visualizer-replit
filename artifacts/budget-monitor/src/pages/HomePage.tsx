@@ -436,7 +436,7 @@ export default function HomePage() {
     return true;
   });
 
-  const barData = (breakdown ?? []).slice(0, 6).map(s => ({
+  const barData = (Array.isArray(breakdown) ? breakdown : []).slice(0, 6).map(s => ({
     name: s.sectorName,
     pct: s.utilizationPct ?? 0,
     color: (s.utilizationPct ?? 0) > 90 ? '#ef4444' : (s.utilizationPct ?? 0) > 70 ? '#f59e0b' : '#10b981',

@@ -6,7 +6,10 @@ import {
 } from "@workspace/db";
 import { eq, and, sql, desc, gte, lte, inArray } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
-import { getTotalAllocated, getTotalRevoked, getAvailableBalance, getUtilizationPct, getSubtreeIds, getUserScopeId } from "../lib/budget-calc";
+import {
+  getBatchAllocStats, getBatchDistributedStats, getBatchPurchaseStats, getBatchAllocCount,
+  getSubtreeIds, getUserScopeId,
+} from "../lib/budget-calc";
 
 const router = Router();
 
@@ -21,7 +24,6 @@ async function buildUserMap(): Promise<Map<number, string>> {
   return new Map(rows.map(r => [r.id, r.name]));
 }
 
-/** Convert raw meta JSON to a human-readable string */
 function prettifyMeta(meta: any, sectorMap: Map<number, string>, userMap: Map<number, string>): string {
   if (!meta) return '—';
   if (typeof meta === 'string') return meta;
@@ -62,7 +64,6 @@ router.get("/reports/audit-log", requireAuth, async (req, res): Promise<void> =>
   if (to)   query = query.where(lte(auditLogsTable.createdAt, new Date(to as string)));
 
   const scopeSectorId = getUserScopeId(user);
-  // For scoped users, fetch more so we have enough after filtering
   const rawLogs = await query.limit(scopeSectorId !== null ? 500 : lim).offset(scopeSectorId !== null ? 0 : off);
 
   const total = Number((await db.select({ c: sql<number>`COUNT(*)` }).from(auditLogsTable))[0]?.c ?? 0);
@@ -77,12 +78,13 @@ router.get("/reports/audit-log", requireAuth, async (req, res): Promise<void> =>
 
   if (scopeSectorId !== null) {
     const subtreeIds = await getSubtreeIds(scopeSectorId);
+    const subtreeSet = new Set(subtreeIds);
     enriched = enriched.filter(log => {
       const m = log.meta as any;
       return (
-        (m?.toSectorId   != null && subtreeIds.includes(m.toSectorId))   ||
-        (m?.sectorId     != null && subtreeIds.includes(m.sectorId))      ||
-        (m?.fromSectorId != null && subtreeIds.includes(m.fromSectorId))  ||
+        (m?.toSectorId   != null && subtreeSet.has(m.toSectorId))   ||
+        (m?.sectorId     != null && subtreeSet.has(m.sectorId))      ||
+        (m?.fromSectorId != null && subtreeSet.has(m.fromSectorId))  ||
         log.userId === user.id
       );
     });
@@ -92,50 +94,87 @@ router.get("/reports/audit-log", requireAuth, async (req, res): Promise<void> =>
   res.json({ items: paged, total: scopeSectorId !== null ? enriched.length : total, offset: off, limit: lim });
 });
 
-/* ── Sector Breakdown ─────────────────────────────────────────── */
+/* ── Sector Breakdown — O(5 queries total regardless of sector count) ─ */
+
+// In-memory cache: 2-minute TTL per user×cycle×root
+const breakdownCache = new Map<string, { data: any[]; ts: number }>();
+const BREAKDOWN_TTL = 2 * 60 * 1000;
+
 router.get("/reports/sector-breakdown", requireAuth, async (req, res): Promise<void> => {
   const user = (req as any).user;
-  const cycleIdParam = req.query.cycleId ? parseInt(req.query.cycleId as string) : null;
+  const cycleIdParam      = req.query.cycleId  ? parseInt(req.query.cycleId  as string) : null;
   const rootSectorIdParam = req.query.sectorId ? parseInt(req.query.sectorId as string) : null;
 
-  // Determine scope: explicit param overrides, otherwise default to user's scope
   const scopeSectorId = getUserScopeId(user);
-  const rootSectorId = rootSectorIdParam ?? scopeSectorId; // null = all sectors
+  const rootSectorId  = rootSectorIdParam ?? scopeSectorId;
 
   let cycleId = cycleIdParam;
   if (!cycleId) {
-    const active = await db.select().from(budgetCyclesTable).where(eq(budgetCyclesTable.isActive, true)).limit(1);
+    const active = await db
+      .select({ id: budgetCyclesTable.id })
+      .from(budgetCyclesTable)
+      .where(eq(budgetCyclesTable.isActive, true))
+      .limit(1);
     cycleId = active[0]?.id ?? null;
   }
 
+  const cacheKey = `bd:${user.id}:${cycleId}:${rootSectorId ?? 'all'}`;
+  const cached = breakdownCache.get(cacheKey);
+  if (cached && Date.now() - cached.ts < BREAKDOWN_TTL) {
+    res.set('X-Cache', 'HIT');
+    res.json(cached.data);
+    return;
+  }
+  res.set('X-Cache', 'MISS');
+
+  // 1. Fetch sector list
   let sectors = await db.select().from(sectorsTable).orderBy(sectorsTable.depth, sectorsTable.name);
   if (rootSectorId !== null) {
     const subtreeIds = await getSubtreeIds(rootSectorId);
-    sectors = sectors.filter(s => subtreeIds.includes(s.id));
+    const subtreeSet = new Set(subtreeIds);
+    sectors = sectors.filter(s => subtreeSet.has(s.id));
   }
 
-  const userMap = await buildUserMap();
-  const sectorMap = new Map(sectors.map(s => [s.id, s.name]));
+  const sectorIds   = sectors.map(s => s.id);
+  const sectorMap   = new Map(sectors.map(s => [s.id, s.name]));
 
-  const result = await Promise.all(sectors.map(async s => {
-    const ta    = cycleId ? await getTotalAllocated(s.id, cycleId) : 0;
-    const tr    = cycleId ? await getTotalRevoked(s.id, cycleId) : 0;
-    const avail = cycleId ? await getAvailableBalance(s.id, cycleId) : 0;
-    const pct   = cycleId ? await getUtilizationPct(s.id, cycleId) : 0;
-    const cnt   = cycleId
-      ? Number((await db.select({ c: sql<number>`COUNT(*)` }).from(allocationsTable).where(
-          and(eq(allocationsTable.toSectorId, s.id), eq(allocationsTable.budgetCycleId, cycleId!))
-        ))[0]?.c ?? 0)
+  // 2. Four parallel batch queries — replaces N×5 individual DB calls
+  const [userMap, allocStats, distributedStats, purchaseStats, allocCounts] = await Promise.all([
+    buildUserMap(),
+    cycleId ? getBatchAllocStats(sectorIds, cycleId)       : Promise.resolve(new Map()),
+    cycleId ? getBatchDistributedStats(sectorIds, cycleId) : Promise.resolve(new Map()),
+    cycleId ? getBatchPurchaseStats(sectorIds, cycleId)    : Promise.resolve(new Map()),
+    cycleId ? getBatchAllocCount(sectorIds, cycleId)       : Promise.resolve(new Map()),
+  ]);
+
+  // 3. Build result in-memory — zero additional DB calls
+  const result = sectors.map(s => {
+    const alloc       = allocStats.get(s.id)       ?? { allocated: 0, revoked: 0 };
+    const distributed = distributedStats.get(s.id) ?? 0;
+    const purchases   = purchaseStats.get(s.id)    ?? 0;
+    const netReceived      = alloc.allocated - alloc.revoked;
+    const availableBalance = netReceived - distributed - purchases;
+    const utilizationPct   = netReceived > 0
+      ? Math.min(100, ((distributed + purchases) / netReceived) * 100)
       : 0;
     return {
-      sectorId: s.id, sectorName: s.name, sectorCode: s.code, depth: s.depth,
-      parentName: s.parentId ? (sectorMap.get(s.parentId) ?? null) : null,
+      sectorId:        s.id,
+      sectorName:      s.name,
+      sectorCode:      s.code,
+      depth:           s.depth,
+      parentName:      s.parentId ? (sectorMap.get(s.parentId) ?? null) : null,
       responsibleUser: s.responsibleUserId ? (userMap.get(s.responsibleUserId) ?? null) : null,
-      totalAllocated: ta, totalRevoked: tr, netAllocated: ta - tr,
-      availableBalance: avail, utilizationPct: pct, allocationCount: cnt,
+      totalAllocated:  alloc.allocated,
+      totalRevoked:    alloc.revoked,
+      netAllocated:    netReceived,
+      availableBalance,
+      utilizationPct,
+      allocationCount: allocCounts.get(s.id) ?? 0,
     };
-  }));
+  });
 
+  breakdownCache.set(cacheKey, { data: result, ts: Date.now() });
+  res.set('Cache-Control', 'private, max-age=120');
   res.json(result);
 });
 
@@ -145,7 +184,6 @@ router.get("/reports/allocations", requireAuth, async (req, res): Promise<void> 
   const { cycleId, sectorId, status } = req.query;
 
   const scopeSectorId = getUserScopeId(user);
-  // Use explicit sectorId param if provided, otherwise user's scope
   const effectiveRootId = sectorId ? parseInt(sectorId as string) : scopeSectorId;
 
   let rows = await db.select().from(allocationsTable).orderBy(desc(allocationsTable.allocatedAt));
@@ -155,7 +193,8 @@ router.get("/reports/allocations", requireAuth, async (req, res): Promise<void> 
 
   if (effectiveRootId !== null) {
     const subtreeIds = await getSubtreeIds(effectiveRootId);
-    rows = rows.filter(r => subtreeIds.includes(r.toSectorId));
+    const subtreeSet = new Set(subtreeIds);
+    rows = rows.filter(r => subtreeSet.has(r.toSectorId));
   }
 
   const [sectorMap, userMap] = await Promise.all([buildSectorMap(), buildUserMap()]);
@@ -163,16 +202,16 @@ router.get("/reports/allocations", requireAuth, async (req, res): Promise<void> 
   const cycleMap = new Map(cycles.map(c => [c.id, c.name]));
 
   const enriched = rows.map(r => ({
-    id: r.id,
-    date: r.allocatedAt,
-    cycle: cycleMap.get(r.budgetCycleId) ?? `Cycle #${r.budgetCycleId}`,
-    fromSector: r.fromSectorId ? (sectorMap.get(r.fromSectorId) ?? `Sector #${r.fromSectorId}`) : 'National Pool',
-    toSector: sectorMap.get(r.toSectorId) ?? `Sector #${r.toSectorId}`,
-    toSectorId: r.toSectorId,
+    id:          r.id,
+    date:        r.allocatedAt,
+    cycle:       cycleMap.get(r.budgetCycleId) ?? `Cycle #${r.budgetCycleId}`,
+    fromSector:  r.fromSectorId ? (sectorMap.get(r.fromSectorId) ?? `Sector #${r.fromSectorId}`) : 'National Pool',
+    toSector:    sectorMap.get(r.toSectorId) ?? `Sector #${r.toSectorId}`,
+    toSectorId:  r.toSectorId,
     allocatedBy: userMap.get(r.allocatedBy) ?? `User #${r.allocatedBy}`,
-    amount: parseFloat(r.amount),
-    status: r.status,
-    comment: r.comment ?? '',
+    amount:      parseFloat(r.amount),
+    status:      r.status,
+    comment:     r.comment ?? '',
   }));
 
   res.json(enriched);
@@ -183,7 +222,7 @@ router.get("/reports/procurement", requireAuth, async (req, res): Promise<void> 
   const user = (req as any).user;
   const { sectorId, status, cycleId } = req.query;
 
-  const scopeSectorId = getUserScopeId(user);
+  const scopeSectorId   = getUserScopeId(user);
   const effectiveRootId = sectorId ? parseInt(sectorId as string) : scopeSectorId;
 
   let rows = await db.select().from(purchaseOrdersTable).orderBy(desc(purchaseOrdersTable.createdAt));
@@ -193,29 +232,38 @@ router.get("/reports/procurement", requireAuth, async (req, res): Promise<void> 
 
   if (effectiveRootId !== null) {
     const subtreeIds = await getSubtreeIds(effectiveRootId);
-    rows = rows.filter(r => subtreeIds.includes(r.sectorId));
+    const subtreeSet = new Set(subtreeIds);
+    rows = rows.filter(r => subtreeSet.has(r.sectorId));
   }
 
   const [sectorMap, userMap] = await Promise.all([buildSectorMap(), buildUserMap()]);
 
-  const enriched = await Promise.all(rows.map(async r => {
-    const items = await db.select({ c: sql<number>`COUNT(*)` })
-      .from(purchaseOrderItemsTable).where(eq(purchaseOrderItemsTable.orderId, r.id));
-    return {
-      id: r.id,
-      date: r.createdAt,
-      sector: sectorMap.get(r.sectorId) ?? `Sector #${r.sectorId}`,
-      sectorId: r.sectorId,
-      createdBy: userMap.get(r.createdBy) ?? `User #${r.createdBy}`,
-      status: r.status,
-      totalAmount: parseFloat(r.totalAmount),
-      itemCount: Number(items[0]?.c ?? 0),
-      submittedAt: r.submittedAt,
-      reviewedBy: r.reviewedBy ? (userMap.get(r.reviewedBy) ?? `User #${r.reviewedBy}`) : null,
-      reviewedAt: r.reviewedAt,
-      rejectionReason: r.rejectionReason,
-      notes: r.notes,
-    };
+  // Batch item counts — one query for all orders instead of N
+  const orderIds = rows.map(r => r.id);
+  let itemCountMap = new Map<number, number>();
+  if (orderIds.length > 0) {
+    const itemRows = await db
+      .select({ orderId: purchaseOrderItemsTable.orderId, count: sql<number>`COUNT(*)` })
+      .from(purchaseOrderItemsTable)
+      .where(inArray(purchaseOrderItemsTable.orderId, orderIds))
+      .groupBy(purchaseOrderItemsTable.orderId);
+    itemCountMap = new Map(itemRows.map(r => [r.orderId, Number(r.count)]));
+  }
+
+  const enriched = rows.map(r => ({
+    id:              r.id,
+    date:            r.createdAt,
+    sector:          sectorMap.get(r.sectorId) ?? `Sector #${r.sectorId}`,
+    sectorId:        r.sectorId,
+    createdBy:       userMap.get(r.createdBy) ?? `User #${r.createdBy}`,
+    status:          r.status,
+    totalAmount:     parseFloat(r.totalAmount),
+    itemCount:       itemCountMap.get(r.id) ?? 0,
+    submittedAt:     r.submittedAt,
+    reviewedBy:      r.reviewedBy ? (userMap.get(r.reviewedBy) ?? `User #${r.reviewedBy}`) : null,
+    reviewedAt:      r.reviewedAt,
+    rejectionReason: r.rejectionReason,
+    notes:           r.notes,
   }));
 
   res.json(enriched);
