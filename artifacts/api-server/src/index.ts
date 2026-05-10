@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { pool } from "@workspace/db";
 
 const rawPort = process.env["PORT"];
 
@@ -22,4 +23,13 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+
+  // Warm the connection pool immediately after startup so the first real
+  // request doesn't pay the SSL handshake cost. Fire-and-forget — a failure
+  // here is non-fatal (the pool will reconnect on the first request).
+  pool.query("SELECT 1").then(() => {
+    logger.info("DB pool warmed");
+  }).catch((err: unknown) => {
+    logger.warn({ err }, "DB pool warm-up failed — will retry on first request");
+  });
 });

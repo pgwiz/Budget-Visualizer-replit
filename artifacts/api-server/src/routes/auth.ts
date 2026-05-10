@@ -31,26 +31,45 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   res.json({ user: { ...safeUser, sector } });
 });
 
+// ── In-process cache for demo-users (rarely changes, fetched on every login page load) ──
+let demoUsersCache: { data: unknown; ts: number } | null = null;
+const DEMO_USERS_TTL = 5 * 60 * 1000; // 5 minutes
+
 // Public endpoint for the prototype login page — returns users grouped by sector hierarchy
 router.get("/auth/demo-users", async (_req, res): Promise<void> => {
-  const users = await db
-    .select({
-      id: usersTable.id,
-      name: usersTable.name,
-      email: usersTable.email,
-      role: usersTable.role,
-      sectorId: usersTable.sectorId,
-    })
-    .from(usersTable)
-    .where(eq(usersTable.isActive, true))
-    .orderBy(usersTable.name);
+  // Serve from cache if fresh
+  if (demoUsersCache && Date.now() - demoUsersCache.ts < DEMO_USERS_TTL) {
+    res.set("X-Cache", "HIT");
+    res.set("Cache-Control", "public, max-age=300");
+    res.json(demoUsersCache.data);
+    return;
+  }
 
-  const sectors = await db
-    .select({ id: sectorsTable.id, name: sectorsTable.name, code: sectorsTable.code, parentId: sectorsTable.parentId, depth: sectorsTable.depth })
-    .from(sectorsTable)
-    .orderBy(sectorsTable.depth, sectorsTable.name);
+  // Fetch users and sectors in parallel (was sequential before)
+  const [users, sectors] = await Promise.all([
+    db
+      .select({
+        id: usersTable.id,
+        name: usersTable.name,
+        email: usersTable.email,
+        role: usersTable.role,
+        sectorId: usersTable.sectorId,
+      })
+      .from(usersTable)
+      .where(eq(usersTable.isActive, true))
+      .orderBy(usersTable.name),
+    db
+      .select({ id: sectorsTable.id, name: sectorsTable.name, code: sectorsTable.code, parentId: sectorsTable.parentId, depth: sectorsTable.depth })
+      .from(sectorsTable)
+      .orderBy(sectorsTable.depth, sectorsTable.name),
+  ]);
 
-  res.json({ users, sectors });
+  const payload = { users, sectors };
+  demoUsersCache = { data: payload, ts: Date.now() };
+
+  res.set("X-Cache", "MISS");
+  res.set("Cache-Control", "public, max-age=300");
+  res.json(payload);
 });
 
 router.post("/auth/logout", (req, res): void => {

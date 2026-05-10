@@ -9,10 +9,13 @@ import {
 
 const router = Router();
 
-// ── In-memory caches (2-min TTL) ─────────────────────────────────────────────
+// ── In-memory caches ──────────────────────────────────────────────────────────
+// TTL is 10 minutes. Cache key is based on the user's *scope* (not their user ID)
+// so all users with the same visibility share one warm entry rather than each
+// paying a cold-start cost individually.
 const listCache = new Map<string, { data: any[]; ts: number }>();
 const treeCache = new Map<string, { data: any[]; ts: number }>();
-const CACHE_TTL = 2 * 60 * 1000;
+const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
 function getFromCache<T>(map: Map<string, { data: T; ts: number }>, key: string): T | null {
   const e = map.get(key);
@@ -89,7 +92,8 @@ router.get("/sectors", requireAuth, async (req, res): Promise<void> => {
   const cycleId = await getActiveCycleId();
   const scopeSectorId = getUserScopeId(user);
 
-  const cacheKey = `list:${user.id}:${cycleId ?? 'none'}`;
+  // Key on scope (not user ID) — all users with the same view share one cache entry
+  const cacheKey = `list:${scopeSectorId ?? 'root'}:${cycleId ?? 'none'}`;
   const hit = getFromCache(listCache, cacheKey);
   if (hit) { res.set('X-Cache', 'HIT'); res.json(hit); return; }
   res.set('X-Cache', 'MISS');
@@ -117,7 +121,7 @@ router.get("/sectors", requireAuth, async (req, res): Promise<void> => {
   });
 
   listCache.set(cacheKey, { data: result, ts: Date.now() });
-  res.set('Cache-Control', 'private, max-age=120');
+  res.set('Cache-Control', 'private, max-age=600');
   res.json(result);
 });
 
@@ -130,7 +134,8 @@ router.get("/sectors/tree", requireAuth, async (req, res): Promise<void> => {
   const cycleId       = cycleIdParam ?? await getActiveCycleId();
   const scopeSectorId = getUserScopeId(user);
 
-  const cacheKey = `tree:${user.id}:${cycleId}:${advanced}:${maxDepthParam ?? 'auto'}`;
+  // Key on scope, not user ID — users with identical visibility share one warm entry
+  const cacheKey = `tree:${scopeSectorId ?? 'root'}:${cycleId}:${advanced}:${maxDepthParam ?? 'auto'}`;
   const hit = getFromCache(treeCache, cacheKey);
   if (hit) { res.set('X-Cache', 'HIT'); res.json(hit); return; }
   res.set('X-Cache', 'MISS');
@@ -197,7 +202,7 @@ router.get("/sectors/tree", requireAuth, async (req, res): Promise<void> => {
   }
 
   treeCache.set(cacheKey, { data: result, ts: Date.now() });
-  res.set('Cache-Control', 'private, max-age=120');
+  res.set('Cache-Control', 'private, max-age=600');
   res.json(result);
 });
 
