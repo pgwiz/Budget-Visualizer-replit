@@ -20,6 +20,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { useLocation } from 'wouter';
+import { Activity } from 'lucide-react';
 
 const TOOLTIP_STYLE = {
   contentStyle: {

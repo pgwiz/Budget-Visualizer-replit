@@ -109,7 +109,6 @@ function NetworkGraph() {
               style={{ transformOrigin: `${n.x}px ${n.y}px`, overflow: 'visible' }}
             >
               <div
-                xmlns="http://www.w3.org/1999/xhtml"
                 style={{
                   width: '100%', height: '100%',
                   background: 'transparent',

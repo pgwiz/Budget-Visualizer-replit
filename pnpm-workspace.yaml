@@ -4,11 +4,6 @@ packages:
   - lib/integrations/*
   - scripts
 
-allowBuilds:
-  '@embedded-postgres/linux-x64': true
-  core-js: true
-  esbuild: true
-
 autoInstallPeers: false
 
 catalog:

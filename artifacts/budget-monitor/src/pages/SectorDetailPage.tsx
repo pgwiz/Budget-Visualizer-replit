@@ -13,9 +13,10 @@ import { NodeDetailPanel } from '@/components/hierarchy/NodeDetailPanel';
 import { BudgetHierarchyTree } from '@/components/hierarchy/BudgetHierarchyTree';
 import { formatCurrency, formatCompact } from '@/lib/api';
 import {
-  faWallet, faChartLine, faChevronLeft, faArrowRight as faArrowDownRight, faArrowRight as faArrowUpRight,
-  faNetworkWired, faArrowLeft, faShoppingCart, faClipboardList, faChartBar
+  faWallet, faChartLine, faChevronLeft, faArrowRight as faArrowDownRight,
+  faNetworkWired, faShoppingCart, faClipboardList, faChartBar, faArrowRight
 } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Link } from 'wouter';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
