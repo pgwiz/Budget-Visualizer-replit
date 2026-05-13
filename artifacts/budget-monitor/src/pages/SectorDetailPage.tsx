@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { GitBranch } from 'lucide-react';
 import {
   useGetSector,
   useGetSectorSubtree,
@@ -12,9 +13,10 @@ import { NodeDetailPanel } from '@/components/hierarchy/NodeDetailPanel';
 import { BudgetHierarchyTree } from '@/components/hierarchy/BudgetHierarchyTree';
 import { formatCurrency, formatCompact } from '@/lib/api';
 import {
-  Wallet, TrendingUp, ChevronLeft, ArrowDownRight, ArrowUpRight,
-  BarChart3, GitBranch, Network, LayoutList,
-} from 'lucide-react';
+  faWallet, faChartLine, faChevronLeft,
+  faNetworkWired, faShoppingCart, faClipboardList, faChartBar, faArrowRight
+} from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Link } from 'wouter';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -60,7 +62,7 @@ export default function SectorDetailPage({ id }: { id: string }) {
   if (!sector) {
     return (
       <div className="text-center py-20">
-        <h2 className="text-2xl font-bold text-white">Sector not found</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Sector not found</h2>
         <Link href="/sectors">
           <a className="text-blue-400 hover:underline mt-4 inline-block">Back to sectors</a>
         </Link>
@@ -111,13 +113,13 @@ export default function SectorDetailPage({ id }: { id: string }) {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-start gap-4">
           <Link href="/sectors">
-            <a className="p-2 rounded-xl glass border-white/10 text-white/40 hover:text-white hover:border-white/30 transition-all mt-1">
-              <ChevronLeft size={20} />
+            <a className="p-2 rounded-xl glass border-gray-200 text-gray-500 hover:text-gray-900 hover:border-white/30 transition-all mt-1">
+              <FontAwesomeIcon icon={faChevronLeft} className="text-[20px]" />
             </a>
           </Link>
           <div>
             <div className="flex items-center gap-3 flex-wrap">
-              <h2 className="text-3xl font-bold text-white">{sector.name}</h2>
+              <h2 className="text-3xl font-bold text-gray-900">{sector.name}</h2>
               <Badge variant="outline" className="px-3 py-1 text-sm font-bold uppercase tracking-wider">
                 {sector.code}
               </Badge>
@@ -127,7 +129,7 @@ export default function SectorDetailPage({ id }: { id: string }) {
                 <Badge className="bg-rose-500/20 text-rose-400 border-rose-500/30 text-xs">Inactive</Badge>
               )}
             </div>
-            <p className="text-white/40 mt-1">Sector performance and resource distribution</p>
+            <p className="text-gray-500 mt-1">Sector performance and resource distribution</p>
           </div>
         </div>
 
@@ -135,11 +137,11 @@ export default function SectorDetailPage({ id }: { id: string }) {
         <div className="glass p-4 rounded-2xl flex items-center gap-5">
           <UtilizationRing value={pct} size={80} strokeWidth={6} />
           <div>
-            <p className="text-[10px] uppercase tracking-widest text-white/30 font-bold">Utilization</p>
+            <p className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Utilization</p>
             <p className={`text-2xl font-bold mt-0.5 ${utilizationColor(pct)}`}>{Math.round(pct)}%</p>
             {sector.responsibleUser && (
-              <p className="text-xs text-white/40 mt-1">
-                Head: <span className="text-white/70">{sector.responsibleUser.name}</span>
+              <p className="text-xs text-gray-500 mt-1">
+                Head: <span className="text-gray-700">{sector.responsibleUser.name}</span>
               </p>
             )}
           </div>
@@ -148,14 +150,14 @@ export default function SectorDetailPage({ id }: { id: string }) {
 
       {/* ── KPI cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <AnimatedStatCard index={0} icon={Wallet}     label="Total Received"  color="primary"
+        <AnimatedStatCard index={0} icon={faWallet}     label="Total Received"  color="primary"
           rawValue={allocated}  formatFn={formatCompact} sub={formatCurrency(allocated)} />
-        <AnimatedStatCard index={1} icon={TrendingUp} label="Distributed Out" color="success"
+        <AnimatedStatCard index={1} icon={faChartLine} label="Distributed Out" color="success"
           rawValue={sector.totalAllocated ?? 0} formatFn={formatCompact} sub={formatCurrency(sector.totalAllocated ?? 0)} />
-        <AnimatedStatCard index={2} icon={Wallet}     label="Available"
+        <AnimatedStatCard index={2} icon={faWallet}     label="Available"
           color={available < 0 ? 'danger' : 'warning'}
           rawValue={available} formatFn={formatCompact} sub={formatCurrency(available)} />
-        <AnimatedStatCard index={3} icon={BarChart3}  label="Utilization"
+        <AnimatedStatCard index={3} icon={faChartBar}  label="Utilization"
           color={pct > 90 ? 'danger' : pct > 70 ? 'warning' : 'primary'}
           rawValue={pct} formatFn={(v) => `${Math.round(v)}%`} />
       </div>
@@ -163,7 +165,7 @@ export default function SectorDetailPage({ id }: { id: string }) {
       {/* ── Budget split + timeline ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Donut */}
-        <GlassCard header={<h3 className="font-bold text-white">Budget Split</h3>}>
+        <GlassCard header={<h3 className="font-bold text-gray-900">Budget Split</h3>}>
           {total > 0 ? (
             <>
               <ResponsiveContainer width="100%" height={200}>
@@ -195,19 +197,19 @@ export default function SectorDetailPage({ id }: { id: string }) {
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2">
                         <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                        <span className="text-xs text-white/60">{item.label}</span>
+                        <span className="text-xs text-gray-600">{item.label}</span>
                       </div>
-                      <span className={`text-xs font-bold ${item.rawValue < 0 ? 'text-rose-400' : 'text-white'}`}>
+                      <span className={`text-xs font-bold ${item.rawValue < 0 ? 'text-rose-400' : 'text-gray-900'}`}>
                         {total > 0 ? Math.round((item.value / total) * 100) : 0}%
                       </span>
                     </div>
-                    <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-1 w-full bg-gray-100 rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full"
                         style={{ width: `${total > 0 ? (item.value / total) * 100 : 0}%`, backgroundColor: item.color }}
                       />
                     </div>
-                    <p className={`text-[10px] mt-0.5 ${item.rawValue < 0 ? 'text-rose-400/70' : 'text-white/30'}`}>
+                    <p className={`text-[10px] mt-0.5 ${item.rawValue < 0 ? 'text-rose-400/70' : 'text-gray-400'}`}>
                       {formatCurrency(item.rawValue)}
                     </p>
                   </div>
@@ -215,12 +217,12 @@ export default function SectorDetailPage({ id }: { id: string }) {
               </div>
             </>
           ) : (
-            <div className="h-48 flex items-center justify-center text-white/20 italic text-sm">No budget data</div>
+            <div className="h-48 flex items-center justify-center text-gray-400 italic text-sm">No budget data</div>
           )}
         </GlassCard>
 
         {/* Allocation timeline */}
-        <GlassCard header={<h3 className="font-bold text-white">Allocation Timeline</h3>} className="lg:col-span-2">
+        <GlassCard header={<h3 className="font-bold text-gray-900">Allocation Timeline</h3>} className="lg:col-span-2">
           {timelineData.length > 0 ? (
             <ResponsiveContainer width="100%" height={260}>
               <AreaChart data={timelineData}>
@@ -238,7 +240,7 @@ export default function SectorDetailPage({ id }: { id: string }) {
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-[260px] flex items-center justify-center text-white/20 italic text-sm">No allocation history</div>
+            <div className="h-[260px] flex items-center justify-center text-gray-400 italic text-sm">No allocation history</div>
           )}
         </GlassCard>
       </div>
@@ -247,7 +249,7 @@ export default function SectorDetailPage({ id }: { id: string }) {
       {childrenBarData.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Bar comparison */}
-          <GlassCard header={<h3 className="font-bold text-white">Sub-Sector Comparison</h3>}>
+          <GlassCard header={<h3 className="font-bold text-gray-900">Sub-Sector Comparison</h3>}>
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={childrenBarData} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
@@ -265,7 +267,7 @@ export default function SectorDetailPage({ id }: { id: string }) {
           </GlassCard>
 
           {/* Sub-sector utilization list */}
-          <GlassCard header={<h3 className="font-bold text-white">Sub-Sector Utilization</h3>}>
+          <GlassCard header={<h3 className="font-bold text-gray-900">Sub-Sector Utilization</h3>}>
             <div className="space-y-3">
               {childrenBarData.map((c, i) => {
                 const barColor = c.pct >= 90 ? '#ef4444' : c.pct >= 70 ? '#f59e0b' : '#3b82f6';
@@ -277,8 +279,8 @@ export default function SectorDetailPage({ id }: { id: string }) {
                     transition={{ delay: i * 0.05 }}
                     className="flex items-center gap-3"
                   >
-                    <div className="w-24 text-xs text-white/60 truncate shrink-0">{c.name}</div>
-                    <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div className="w-24 text-xs text-gray-600 truncate shrink-0">{c.name}</div>
+                    <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
                       <motion.div
                         className="h-full rounded-full"
                         initial={{ width: 0 }}
@@ -300,14 +302,14 @@ export default function SectorDetailPage({ id }: { id: string }) {
 
       {/* ── Hierarchy / Sub-sectors tree ── */}
       {subtreeChildren.length > 0 && (
-        <GlassCard header={<h3 className="font-bold text-white">Sub-Sector Hierarchy</h3>} className="p-6">
+        <GlassCard header={<h3 className="font-bold text-gray-900">Sub-Sector Hierarchy</h3>} className="p-6">
           <Tabs defaultValue="hierarchy">
-            <TabsList className="glass border-white/10 p-1 mb-6 w-fit">
+            <TabsList className="glass border-gray-200 p-1 mb-6 w-fit">
               <TabsTrigger value="hierarchy" className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400 gap-2 text-xs">
                 <GitBranch size={13} /> Hierarchy Map
               </TabsTrigger>
               <TabsTrigger value="tree" className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400 gap-2 text-xs">
-                <Network size={13} /> Tree View
+                <FontAwesomeIcon icon={faNetworkWired} className="text-[13px]" /> Tree View
               </TabsTrigger>
             </TabsList>
             <TabsContent value="hierarchy">
@@ -322,7 +324,7 @@ export default function SectorDetailPage({ id }: { id: string }) {
 
       {/* ── Recent allocations ── */}
       {recentAllocs.length > 0 && (
-        <GlassCard header={<h3 className="font-bold text-white">Recent Allocations</h3>}>
+        <GlassCard header={<h3 className="font-bold text-gray-900">Recent Allocations</h3>}>
           <div className="space-y-2">
             {recentAllocs.map((a: any, i: number) => {
               const isIn = a.toSector?.id === sectorId;
@@ -332,19 +334,19 @@ export default function SectorDetailPage({ id }: { id: string }) {
                   initial={{ opacity: 0, y: 4 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.04 }}
-                  className="flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/8 transition-all"
+                  className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 border border-transparent hover:border-gray-200 transition-all"
                 >
                   <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${isIn ? 'bg-emerald-500/10' : 'bg-blue-500/10'}`}>
                     {isIn
-                      ? <ArrowDownRight size={15} className="text-emerald-400" />
-                      : <ArrowUpRight size={15} className="text-blue-400" />
+                      ? <FontAwesomeIcon icon={faArrowRight} className="text-[15px] text-emerald-400 rotate-45" />
+                      : <FontAwesomeIcon icon={faArrowRight} className="text-[15px] text-blue-400" />
                     }
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-white">
+                    <p className="text-xs font-semibold text-gray-900">
                       {isIn ? `From ${a.fromSector?.name ?? 'Central'}` : `To ${a.toSector?.name ?? '—'}`}
                     </p>
-                    <p className="text-[10px] text-white/30 mt-0.5">
+                    <p className="text-[10px] text-gray-400 mt-0.5">
                       {new Date(a.allocatedAt ?? a.createdAt).toLocaleDateString()} · by {a.allocatedByUser?.name ?? '—'}
                     </p>
                   </div>
@@ -354,7 +356,7 @@ export default function SectorDetailPage({ id }: { id: string }) {
                     </p>
                     <Badge
                       variant="outline"
-                      className={`text-[9px] mt-0.5 ${a.status === 'active' ? 'text-emerald-400 border-emerald-500/30' : a.status === 'revoked' ? 'text-rose-400 border-rose-500/30' : 'text-white/40 border-white/10'}`}
+                      className={`text-[9px] mt-0.5 ${a.status === 'active' ? 'text-emerald-400 border-emerald-500/30' : a.status === 'revoked' ? 'text-rose-400 border-rose-500/30' : 'text-gray-500 border-gray-200'}`}
                     >
                       {a.status}
                     </Badge>

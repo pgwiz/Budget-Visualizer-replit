@@ -13,5 +13,8 @@
     "@types/pg": "^8.18.0",
     "pg": "^8.20.0",
     "tsx": "catalog:"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.1.0"
   }
 }

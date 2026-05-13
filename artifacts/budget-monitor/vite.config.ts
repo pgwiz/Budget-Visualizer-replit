@@ -54,6 +54,22 @@ export default defineConfig({
     fs: {
       strict: true,
     },
+    proxy: {
+      "/api": {
+        target: "http://localhost:3000",
+        changeOrigin: true,
+        // SSE streams must not be buffered or they never flush
+        configure: (proxy) => {
+          proxy.on("proxyReq", (_proxyReq, req) => {
+            if (req.url?.includes("/stream")) {
+              // Keep SSE connections alive indefinitely
+              (proxy as any).options.proxyTimeout = 0;
+              (proxy as any).options.timeout = 0;
+            }
+          });
+        },
+      },
+    },
   },
   preview: {
     port,

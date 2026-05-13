@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, ChevronDown, Check, Loader2 } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faChevronRight, faChevronDown, faProjectDiagram, faUndo, faGripVertical, faExpand, faCompress, faTimes, faExternalLinkAlt, faChartLine, faWallet, faSearchPlus, faChevronUp, faChevronLeft, faLayerGroup, faList, faCog, faPercentage, faHome, faDownload, faCheck, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { exportData, type ExportFormat, type ExportColumn, type ChartDataItem } from '@/lib/export';
 
 interface ExportMenuProps {
@@ -69,7 +71,7 @@ export function ExportMenu({
         disabled={disabled || !!loading}
         className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white border border-white/15 bg-white/8 hover:bg-white/12 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
       >
-        {loading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+        {loading ? <FontAwesomeIcon icon={faSpinner} className={`text-[${15}px] animate-spin`} /> : <FontAwesomeIcon icon={faDownload} className={`text-[${15}px] `} />}
         Export
         <ChevronDown size={13} className={`text-white/40 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
@@ -127,8 +129,8 @@ export function ExportMenu({
                       <p className="text-[11px] text-white/30 truncate">{fmt.desc}</p>
                     </div>
                     <div className="w-5 h-5 flex items-center justify-center shrink-0">
-                      {isLoading && <Loader2 size={14} className="animate-spin text-blue-400" />}
-                      {isDone    && <Check    size={14} className="text-emerald-400" />}
+                      {isLoading && <FontAwesomeIcon icon={faSpinner} className={`text-[${14}px] animate-spin text-blue-400`} />}
+                      {isDone    && <FontAwesomeIcon icon={faCheck} className={`text-[${14}px] text-emerald-400`} />}
                     </div>
                   </button>
                 );

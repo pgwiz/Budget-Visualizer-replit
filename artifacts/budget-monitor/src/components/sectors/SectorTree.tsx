@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, ChevronDown, Network } from 'lucide-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faChevronRight, faChevronDown, faProjectDiagram, faUndo, faGripVertical, faExpand, faCompress, faTimes, faExternalLinkAlt, faChartLine, faWallet, faSearchPlus, faChevronUp, faChevronLeft, faLayerGroup, faList, faCog, faPercentage, faHome, faDownload, faCheck, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { Badge } from '@/components/ui/badge';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { formatCurrency, formatCompact } from '@/lib/api';
@@ -15,7 +16,7 @@ interface SectorTreeProps {
 
 export function SectorTree({ nodes, depth = 0 }: SectorTreeProps) {
   return (
-    <div className={cn("space-y-2", depth > 0 && "ml-6 border-l border-white/5 pl-4")}>
+    <div className={cn("space-y-2", depth > 0 && "ml-6 border-l border-gray-100 pl-4")}>
       {nodes.map((node) => (
         <SectorNode key={node.id} node={node} depth={depth} />
       ))}
@@ -29,36 +30,36 @@ function SectorNode({ node, depth }: { node: SectorTreeNode; depth: number }) {
 
   return (
     <div className="space-y-2">
-      <div className="group flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10 transition-all duration-200">
+      <div className="group flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 border border-transparent hover:border-gray-200 transition-all duration-200">
         <button 
           onClick={() => setIsExpanded(!isExpanded)}
           className={cn(
-            "p-1 rounded-md hover:bg-white/10 text-white/40 hover:text-white transition-colors",
+            "p-1 rounded-md hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-colors",
             !hasChildren && "invisible"
           )}
         >
-          {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          {isExpanded ? <FontAwesomeIcon icon={faChevronDown} className={`text-[${16}px] `} /> : <FontAwesomeIcon icon={faChevronRight} className={`text-[${16}px] `} />}
         </button>
 
         <div className="flex-1 flex items-center justify-between gap-4">
           <Link href={`/sectors/${node.id}`}>
             <a className="flex items-center gap-3 flex-1 min-w-0">
               <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
-                <Network size={16} className="text-blue-400" />
+                <FontAwesomeIcon icon={faProjectDiagram} className={`text-[${16}px] text-blue-400`} />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-white truncate">{node.name}</span>
-                  <Badge variant="outline" className="text-[10px] uppercase font-bold text-white/40">
+                  <span className="text-sm font-semibold text-gray-900 truncate">{node.name}</span>
+                  <Badge variant="outline" className="text-[10px] uppercase font-bold text-gray-500">
                     {node.code}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-4 mt-1">
-                  <span className="text-xs text-white/40">
-                    Allocated: <span className="text-white/60" title={formatCurrency(node.netAllocated)}>{formatCompact(node.netAllocated)}</span>
+                  <span className="text-xs text-gray-500">
+                    Allocated: <span className="text-gray-600" title={formatCurrency(node.netAllocated)}>{formatCompact(node.netAllocated)}</span>
                   </span>
-                  <span className="text-xs text-white/40">
-                    Available: <span className={node.availableBalance < 0 ? 'text-rose-400' : 'text-white/60'} title={formatCurrency(node.availableBalance)}>{formatCompact(node.availableBalance)}</span>
+                  <span className="text-xs text-gray-500">
+                    Available: <span className={node.availableBalance < 0 ? 'text-rose-400' : 'text-gray-600'} title={formatCurrency(node.availableBalance)}>{formatCompact(node.availableBalance)}</span>
                   </span>
                 </div>
               </div>
@@ -67,7 +68,7 @@ function SectorNode({ node, depth }: { node: SectorTreeNode; depth: number }) {
 
           <div className="w-32 hidden sm:block">
             <div className="flex justify-between items-center mb-1">
-              <span className="text-[10px] text-white/40 font-bold uppercase tracking-wider">Utilization</span>
+              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Utilization</span>
               <span className="text-[10px] text-blue-400 font-bold">{Math.round(node.utilizationPct)}%</span>
             </div>
             <ProgressBar 

@@ -5,6 +5,7 @@ import {
 } from "@workspace/db";
 import { eq, and, inArray } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
+import { createNotification } from "../utils/createNotification.js";
 
 const router = Router();
 
@@ -185,6 +186,11 @@ router.post("/purchase-orders", requireAuth, async (req, res): Promise<void> => 
     status: "draft",
     totalAmount: "0",
   }).returning();
+  createNotification({
+    actorId: user.id, actionType: "PROCUREMENT_ORDER_CREATED",
+    entityType: "procurement", entityId: created.id,
+    metadata: { sectorId, budgetCycleId },
+  });
   res.status(201).json(await enrichOrder(created));
 });
 
@@ -325,6 +331,12 @@ router.post("/purchase-orders/:orderId/review", requireAuth, async (req, res): P
     rejectionReason: action === "reject" ? rejectionReason : null,
     updatedAt: new Date(),
   }).where(eq(purchaseOrdersTable.id, id)).returning();
+  createNotification({
+    actorId: user.id,
+    actionType: action === "approve" ? "PROCUREMENT_ORDER_APPROVED" : "PROCUREMENT_ORDER_REJECTED",
+    entityType: "procurement", entityId: id,
+    metadata: { action, orderId: id, rejectionReason: rejectionReason ?? null },
+  });
   res.json(await enrichOrder(updated));
 });
 

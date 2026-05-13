@@ -1,30 +1,43 @@
 import { useEffect, useRef, useState } from 'react';
+import { TrendingUp } from 'lucide-react';
+import budgetIllustration from '@/assets /PNG/4 - BUDGETTING.png';
 import { motion, useAnimation, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/hooks/useAuth';
 import { useGetDashboardSummary, useGetActiveCycle, useGetSectorBreakdown } from '@workspace/api-client-react';
-import { formatCompact } from '@/lib/api';
+import { formatCompact, formatCurrency } from '@/lib/api';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  LayoutDashboard, Network, ArrowLeftRight, FileText,
-  Workflow, Users, ChevronRight, ShoppingCart, Package,
-  ArrowRight, TrendingUp,
-} from 'lucide-react';
+  faChartPie, faShieldAlt, faArrowRight, faCheckCircle,
+  faPlayCircle, faBuilding, faUsers, faGlobe,
+  faLayerGroup, faChartLine, faLock, faBolt,
+  faExchangeAlt, faStar, faQuoteLeft, faCheck,
+  faTachometerAlt, faProjectDiagram, faBox, faFileAlt,
+  faSitemap, faShoppingCart, faChevronRight, faHome,
+  faWallet, faCoins, faBullseye
+} from '@fortawesome/free-solid-svg-icons';
 
 /* ════════════════════════════════════════════════════════════════
-   ANIMATED NETWORK GRAPH
+   ANIMATED NETWORK GRAPH — FA ICONS
    ════════════════════════════════════════════════════════════════ */
+
+// Shared line/particle color
+const FLOW_COLOR = 'rgba(255,255,255,0.25)';
+const PARTICLE_COLOR = 'rgba(255,255,255,0.7)';
+
 const NODES = [
-  { id: 'pool',  x: 220, y: 70,  r: 24, label: 'National Pool', color: '#3b82f6', ring: '#60a5fa' },
-  { id: 'm1',   x: 90,  y: 180, r: 18, label: 'Agriculture',   color: '#10b981', ring: '#34d399' },
-  { id: 'm2',   x: 220, y: 190, r: 18, label: 'Education',     color: '#f59e0b', ring: '#fbbf24' },
-  { id: 'm3',   x: 350, y: 180, r: 18, label: 'Health',        color: '#6366f1', ring: '#818cf8' },
-  { id: 'd1',   x: 40,  y: 295, r: 12, label: 'Crops',         color: '#10b981', ring: '#34d399' },
-  { id: 'd2',   x: 130, y: 295, r: 12, label: 'Livestock',     color: '#10b981', ring: '#34d399' },
-  { id: 'd3',   x: 185, y: 295, r: 12, label: 'Primary',       color: '#f59e0b', ring: '#fbbf24' },
-  { id: 'd4',   x: 260, y: 295, r: 12, label: 'Secondary',     color: '#f59e0b', ring: '#fbbf24' },
-  { id: 'd5',   x: 320, y: 295, r: 12, label: 'Hospitals',     color: '#6366f1', ring: '#818cf8' },
-  { id: 'd6',   x: 400, y: 295, r: 12, label: 'Clinics',       color: '#6366f1', ring: '#818cf8' },
+  { id: 'pool', x: 220, y: 60,  size: 48, label: 'National Pool', icon: 'faLayerGroup' },
+  { id: 'm1',  x: 80,  y: 175, size: 40, label: 'Agriculture',   icon: 'faBuilding'   },
+  { id: 'm2',  x: 220, y: 185, size: 40, label: 'Education',     icon: 'faUsers'      },
+  { id: 'm3',  x: 360, y: 175, size: 40, label: 'Health',        icon: 'faChartPie'   },
+  { id: 'd1',  x: 30,  y: 295, size: 32, label: 'Crops',         icon: 'faLayerGroup' },
+  { id: 'd2',  x: 120, y: 295, size: 32, label: 'Livestock',     icon: 'faLayerGroup' },
+  { id: 'd3',  x: 185, y: 295, size: 32, label: 'Primary',       icon: 'faUsers'      },
+  { id: 'd4',  x: 260, y: 295, size: 32, label: 'Secondary',     icon: 'faUsers'      },
+  { id: 'd5',  x: 315, y: 295, size: 32, label: 'Hospitals',     icon: 'faChartPie'   },
+  { id: 'd6',  x: 400, y: 295, size: 32, label: 'Clinics',       icon: 'faChartPie'   },
 ];
+
 const EDGES = [
   ['pool','m1'],['pool','m2'],['pool','m3'],
   ['m1','d1'],['m1','d2'],
@@ -32,10 +45,15 @@ const EDGES = [
   ['m3','d5'],['m3','d6'],
 ];
 
-function Particle({ x1,y1,x2,y2,color,delay }:{x1:number;y1:number;x2:number;y2:number;color:string;delay:number}) {
+// Map icon names to actual FA icons — resolved at render
+const FA_MAP: Record<string, any> = {
+  faLayerGroup, faBuilding, faUsers, faChartPie,
+};
+
+function Particle({ x1,y1,x2,y2,delay }:{x1:number;y1:number;x2:number;y2:number;delay:number}) {
   return (
     <motion.circle
-      r={3} fill={color} opacity={0.85}
+      r={3} fill={PARTICLE_COLOR}
       initial={{ cx: x1, cy: y1, opacity: 0 }}
       animate={{ cx: [x1, x2], cy: [y1, y2], opacity: [0, 1, 1, 0] }}
       transition={{ duration: 1.8, delay, repeat: Infinity, repeatDelay: 2.5, ease: 'easeInOut' }}
@@ -45,17 +63,7 @@ function Particle({ x1,y1,x2,y2,color,delay }:{x1:number;y1:number;x2:number;y2:
 
 function NetworkGraph() {
   return (
-    <svg viewBox="0 0 440 340" className="w-full h-full" style={{ filter: 'drop-shadow(0 0 30px rgba(59,130,246,0.15))' }}>
-      {/* Glow defs */}
-      <defs>
-        {NODES.map(n => (
-          <filter key={n.id} id={`glow-${n.id}`}>
-            <feGaussianBlur stdDeviation="3" result="blur" />
-            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
-        ))}
-      </defs>
-
+    <svg viewBox="0 0 440 350" className="w-full h-full">
       {/* Edges */}
       {EDGES.map(([a, b], i) => {
         const na = NODES.find(n => n.id === a)!;
@@ -63,69 +71,74 @@ function NetworkGraph() {
         return (
           <motion.line
             key={i} x1={na.x} y1={na.y} x2={nb.x} y2={nb.y}
-            stroke={nb.color} strokeWidth={1.5} strokeOpacity={0.3}
-            strokeDasharray="4 4"
-            initial={{ pathLength: 0, opacity: 0 }}
-            animate={{ pathLength: 1, opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.3 + i * 0.1 }}
+            stroke={FLOW_COLOR} strokeWidth={1.5} strokeDasharray="5 5"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.2 + i * 0.08 }}
           />
         );
       })}
 
-      {/* Particles flowing along edges */}
+      {/* Particles */}
       {EDGES.map(([a, b], i) => {
         const na = NODES.find(n => n.id === a)!;
         const nb = NODES.find(n => n.id === b)!;
-        return (
-          <Particle key={`p-${i}`} x1={na.x} y1={na.y} x2={nb.x} y2={nb.y}
-            color={nb.ring} delay={i * 0.5} />
-        );
+        return <Particle key={`p-${i}`} x1={na.x} y1={na.y} x2={nb.x} y2={nb.y} delay={i * 0.4} />;
       })}
 
-      {/* Nodes */}
-      {NODES.map((n, i) => (
-        <g key={n.id}>
-          {/* Pulse ring */}
-          <motion.circle cx={n.x} cy={n.y} r={n.r + 6}
-            fill="none" stroke={n.ring} strokeWidth={1.5}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: [0.6, 0, 0.6], scale: [1, 1.4, 1] }}
-            transition={{ duration: 2.5, delay: i * 0.25, repeat: Infinity, ease: 'easeInOut' }}
-            style={{ transformOrigin: `${n.x}px ${n.y}px` }}
-          />
-          {/* Node fill */}
-          <motion.circle cx={n.x} cy={n.y} r={n.r}
-            fill={n.color} fillOpacity={0.15}
-            stroke={n.color} strokeWidth={2}
-            filter={`url(#glow-${n.id})`}
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 + i * 0.1, type: 'spring', stiffness: 200 }}
-            style={{ transformOrigin: `${n.x}px ${n.y}px` }}
-          />
-          {/* Inner dot */}
-          <motion.circle cx={n.x} cy={n.y} r={n.r * 0.35}
-            fill={n.ring}
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 0.3, delay: 0.4 + i * 0.1 }}
-            style={{ transformOrigin: `${n.x}px ${n.y}px` }}
-          />
-          {/* Label */}
-          {n.r >= 18 && (
-            <motion.text x={n.x} y={n.y + n.r + 14} textAnchor="middle"
-              fill={n.ring} fontSize={9} fontWeight={600} opacity={0.85}
-              initial={{ opacity: 0 }} animate={{ opacity: 0.85 }}
-              transition={{ delay: 0.6 + i * 0.1 }}
+      {/* Nodes — icon only, no background */}
+      {NODES.map((n, i) => {
+        const half = n.size / 2;
+        const iconPx = n.size * 0.5;
+        return (
+          <g key={n.id}>
+            {/* Soft pulse glow ring */}
+            <motion.circle cx={n.x} cy={n.y} r={half + 4}
+              fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth={1}
+              animate={{ opacity: [0.4, 0, 0.4], r: [half + 4, half + 12, half + 4] }}
+              transition={{ duration: 2.5, delay: i * 0.3, repeat: Infinity, ease: 'easeInOut' }}
+            />
+
+            {/* FA icon — no backing, transparent foreignObject */}
+            <motion.foreignObject
+              x={n.x - half} y={n.y - half}
+              width={n.size} height={n.size}
+              initial={{ opacity: 0, scale: 0.6 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2 + i * 0.08, type: 'spring', stiffness: 220 }}
+              style={{ transformOrigin: `${n.x}px ${n.y}px`, overflow: 'visible' }}
             >
-              {n.label}
-            </motion.text>
-          )}
-        </g>
-      ))}
+              <div
+                style={{
+                  width: '100%', height: '100%',
+                  background: 'transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <FontAwesomeIcon
+                  icon={FA_MAP[n.icon]}
+                  style={{ fontSize: `${iconPx}px`, color: 'rgba(255,255,255,0.8)' }}
+                />
+              </div>
+            </motion.foreignObject>
+
+            {/* Label */}
+            {n.size >= 40 && (
+              <motion.text x={n.x} y={n.y + half + 14} textAnchor="middle"
+                fill="rgba(255,255,255,0.45)" fontSize={9} fontWeight={600}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 + i * 0.08 }}
+              >
+                {n.label}
+              </motion.text>
+            )}
+          </g>
+        );
+      })}
     </svg>
   );
 }
+
 
 /* ════════════════════════════════════════════════════════════════
    CORPORATE MEMPHIS / ALEGRIA SVG ILLUSTRATION
@@ -318,7 +331,7 @@ function LiveBarChart({ data }: { data: { name: string; pct: number; color: stri
       {data.map((d, i) => (
         <div key={d.name}>
           <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-white/50 font-medium truncate max-w-[140px]">{d.name}</span>
+            <span className="text-xs text-gray-600 font-medium truncate max-w-[140px]">{d.name}</span>
             <motion.span
               className="text-xs font-bold"
               style={{ color: d.color }}
@@ -329,7 +342,7 @@ function LiveBarChart({ data }: { data: { name: string; pct: number; color: stri
               {Math.round(d.pct)}%
             </motion.span>
           </div>
-          <div className="h-2 rounded-full bg-white/8 overflow-hidden">
+          <div className="h-2 rounded-full bg-gray-50 overflow-hidden">
             <motion.div
               className="h-full rounded-full"
               style={{ backgroundColor: d.color }}
@@ -375,9 +388,9 @@ function CountingStat({ target, prefix = '', suffix = '', color, label, delay = 
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: delay + 0.2, duration: 0.5 }}
-      className="rounded-2xl border border-white/10 bg-white/5 p-5 flex flex-col gap-1 backdrop-blur-sm"
+      className="rounded-2xl border border-gray-200 bg-gray-50 p-5 flex flex-col gap-1 backdrop-blur-sm"
     >
-      <p className="text-[10px] uppercase tracking-widest text-white/30 font-bold">{label}</p>
+      <p className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">{label}</p>
       <p className="text-2xl font-extrabold" style={{ color }}>
         {prefix}{target >= 1e6 ? formatCompact(val) : val.toLocaleString()}{suffix}
       </p>
@@ -391,17 +404,110 @@ function CountingStat({ target, prefix = '', suffix = '', color, label, delay = 
 }
 
 /* ════════════════════════════════════════════════════════════════
+   BUDGET STATS CARD
+   ════════════════════════════════════════════════════════════════ */
+function StatIconHover({ icon }: { icon: any }) {
+  return (
+    <motion.div
+      className="mb-3 inline-block"
+      whileHover={{ scale: 1.5, rotate: 15, y: -4 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 18 }}
+      style={{ cursor: 'default' }}
+    >
+      <FontAwesomeIcon
+        icon={icon}
+        style={{ fontSize: '42px', color: '#ffffff' }}
+      />
+    </motion.div>
+  );
+}
+
+function BudgetStatsCard({ summary }: { summary: any }) {
+  const stats = [
+    {
+      label: 'Total Budget',
+      value: summary ? formatCurrency(summary.totalBudget ?? 0) : 'Ksh 0',
+      sub: summary ? `${(summary.utilizationPct ?? 0).toFixed(1)}% utilized` : '0% utilized',
+      icon: faWallet,
+    },
+    {
+      label: 'Total Allocated',
+      value: summary ? formatCurrency(summary.totalAllocated ?? 0) : 'Ksh 0',
+      sub: summary ? `${summary.activeAllocations ?? 0} active allocations` : '0 active allocations',
+      icon: faCoins,
+    },
+    {
+      label: 'Available Balance',
+      value: summary ? formatCurrency(summary.availableBalance ?? 0) : 'Ksh 0',
+      sub: summary ? `${summary.sectorCount ?? 0} active sectors` : '0 sectors',
+      icon: faChartLine,
+    },
+    {
+      label: 'Utilization',
+      value: summary ? `${(summary.utilizationPct ?? 0).toFixed(1)}%` : '0%',
+      sub: summary ? `${summary.activeAllocations ?? 0} active allocations` : '0 active allocations',
+      icon: faBullseye,
+    },
+  ];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.2, duration: 0.5 }}
+      className="mb-8"
+    >
+      <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-[#343a40]/50">
+        {stats.map((s, i) => (
+          <motion.div
+            key={s.label}
+            className="relative px-5 py-5"
+            style={{ backgroundColor: '#212529' }}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 + i * 0.07 }}
+          >
+            {/* Icon — top-left, white, with hover pop+tilt */}
+            <StatIconHover icon={s.icon} />
+
+            {/* Label */}
+            <p className="text-[10px] uppercase tracking-widest font-bold mb-1" style={{ color: '#6b7280' }}>
+              {s.label}
+            </p>
+
+            {/* Value */}
+            <motion.p
+              className="text-lg md:text-xl font-extrabold leading-none mb-1 text-white"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 + i * 0.08 }}
+            >
+              {s.value}
+            </motion.p>
+
+            {/* Sub label */}
+            <p className="text-[11px]" style={{ color: '#6b7280' }}>{s.sub}</p>
+          </motion.div>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
+
+
+/* ════════════════════════════════════════════════════════════════
    QUICK LINKS
    ════════════════════════════════════════════════════════════════ */
 const ALL_LINKS = [
-  { href:'/dashboard',   icon:LayoutDashboard, label:'Dashboard',    desc:'Live KPIs & charts',          color:'#3b82f6' },
-  { href:'/sectors',     icon:Network,         label:'Sectors',      desc:'Org chart & hierarchy',        color:'#6366f1' },
-  { href:'/allocations', icon:ArrowLeftRight,  label:'Allocations',  desc:'Budget flows & transfers',     color:'#10b981' },
-  { href:'/procurement', icon:ShoppingCart,    label:'Procurement',  desc:'Purchase orders & spend',      color:'#f59e0b' },
-  { href:'/catalog',     icon:Package,         label:'Catalog',      desc:'Products & pricing',           color:'#8b5cf6' },
-  { href:'/reports',     icon:FileText,        label:'Reports',      desc:'Export & breakdowns',          color:'#ef4444' },
-  { href:'/hierarchy-designer', icon:Workflow, label:'Designer',     desc:'Build the budget tree',        color:'#ec4899' },
-  { href:'/users',       icon:Users,           label:'Users',        desc:'Accounts & roles',             color:'#0ea5e9' },
+  { href:'/dashboard',          faIcon:faTachometerAlt,  label:'Dashboard',    desc:'Live KPIs & charts',          color:'#3b82f6' },
+  { href:'/sectors',            faIcon:faProjectDiagram, label:'Sectors',      desc:'Org chart & hierarchy',        color:'#6366f1' },
+  { href:'/allocations',        faIcon:faExchangeAlt,    label:'Allocations',  desc:'Budget flows & transfers',     color:'#10b981' },
+  { href:'/procurement',        faIcon:faShoppingCart,   label:'Procurement',  desc:'Purchase orders & spend',      color:'#f59e0b' },
+  { href:'/catalog',            faIcon:faBox,            label:'Catalog',      desc:'Products & pricing',           color:'#8b5cf6' },
+  { href:'/reports',            faIcon:faFileAlt,        label:'Reports',      desc:'Export & breakdowns',          color:'#ef4444' },
+  { href:'/hierarchy-designer', faIcon:faSitemap,        label:'Designer',     desc:'Build the budget tree',        color:'#ec4899' },
+  { href:'/users',              faIcon:faUsers,          label:'Users',        desc:'Accounts & roles',             color:'#0ea5e9' },
 ];
 
 /* ════════════════════════════════════════════════════════════════
@@ -446,98 +552,109 @@ export default function HomePage() {
     <div className="space-y-0 pb-12 -mt-2">
 
       {/* ══════════════════════════════════════════════════════════
-          HERO SECTION
+          WELCOME BANNER
       ══════════════════════════════════════════════════════════ */}
-      <section className="relative min-h-[420px] flex items-center overflow-hidden rounded-3xl mb-8"
-        style={{ background:'linear-gradient(135deg,rgba(15,23,42,0.95) 0%,rgba(30,42,74,0.9) 50%,rgba(15,23,42,0.95) 100%)', border:'1px solid rgba(255,255,255,0.07)' }}>
+      <section
+        className="relative rounded-2xl mb-8 flex items-center group"
+        style={{ backgroundColor: '#212529', minHeight: '220px', overflow: 'visible' }}
+      >
+        {/* Clip container for bg effects */}
+        <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
+        </div>
 
-        {/* Dot grid */}
-        <div className="absolute inset-0 opacity-[0.035]"
-          style={{ backgroundImage:'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize:'28px 28px' }} />
 
-        {/* Moving glow blobs */}
-        <motion.div className="absolute -top-24 -left-24 w-96 h-96 rounded-full pointer-events-none"
-          style={{ background:'radial-gradient(circle, rgba(59,130,246,0.18) 0%, transparent 70%)' }}
-          animate={{ x:[0,40,0], y:[0,30,0] }} transition={{ duration:10, repeat:Infinity, ease:'easeInOut' }}
-        />
-        <motion.div className="absolute -bottom-20 right-0 w-72 h-72 rounded-full pointer-events-none"
-          style={{ background:'radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%)' }}
-          animate={{ x:[0,-30,0], y:[0,-20,0] }} transition={{ duration:8, delay:2, repeat:Infinity, ease:'easeInOut' }}
-        />
+        {/* Left content */}
+        <div className="relative z-10 flex-1 px-8 py-10">
+          <motion.h1 initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.5, delay:0.1 }}
+            className="text-2xl md:text-3xl font-extrabold text-white leading-snug mb-1">
+            Welcome back, <span style={{ color:'#fcbf49' }}>{user?.name?.split(' ')[0] ?? 'User'}!</span>
+          </motion.h1>
 
-        <div className="relative z-10 w-full grid grid-cols-1 lg:grid-cols-2 gap-0 items-center">
-          {/* Left: text */}
-          <div className="p-8 md:p-12">
-            <motion.div initial={{ opacity:0, y:-10 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.5 }}
-              className="flex items-center gap-3 mb-5">
-              <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 rounded-full border"
-                style={{ color:'#60a5fa', background:'rgba(59,130,246,0.1)', borderColor:'rgba(59,130,246,0.25)' }}>
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-                {cycle?.name ?? 'Budget Monitor'} · Live
-              </span>
-            </motion.div>
+          <motion.p initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.25 }}
+            className="text-sm mb-5" style={{ color:'rgba(255,255,255,0.55)', maxWidth:'380px' }}>
+            Real-time hierarchical budget tracking, allocation flows and sector analytics — all in one place.
+          </motion.p>
 
-            <motion.h1 initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.6, delay:0.1 }}
-              className="text-4xl md:text-5xl font-extrabold text-white leading-tight mb-3">
-              Welcome back,<br />
-              <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-blue-300 bg-clip-text text-transparent">
-                {user?.name?.split(' ')[0] ?? 'User'}
-              </span>
-            </motion.h1>
+          {/* CTA */}
+          <motion.div initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.35 }}>
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold transition-all hover:opacity-90 active:scale-95"
+              style={{ background: '#ffffff', color: '#212529' }}
+            >
+              Open Dashboard <FontAwesomeIcon icon={faArrowRight} />
+            </button>
+          </motion.div>
+        </div>
 
-            <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.3 }}
-              className="flex items-center gap-2 mb-5">
-              <span className="text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-lg"
-                style={roleBadgeStyle(user?.role)}>
-                {roleLabel(user?.role)}
-              </span>
-            </motion.div>
-
-            <motion.p initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.35, duration:0.5 }}
-              className="text-white/40 text-sm leading-relaxed mb-8 max-w-md">
-              National Budget Control Platform — real-time hierarchical budget tracking, allocation flows, procurement orders and sector analytics in one place.
-            </motion.p>
-
-            <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.5 }}
-              className="flex items-center gap-3 flex-wrap">
-              <button onClick={() => navigate('/dashboard')}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:scale-105 active:scale-95"
-                style={{ background:'linear-gradient(135deg,#3b82f6,#6366f1)', boxShadow:'0 0 24px rgba(99,102,241,0.4)' }}>
-                Open Dashboard <ArrowRight size={15} />
-              </button>
-              <button onClick={() => navigate('/sectors')}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white/70 border border-white/10 hover:border-white/25 hover:text-white transition-all">
-                View Sectors <ChevronRight size={15} />
-              </button>
-            </motion.div>
+        {/* Right: faded home icon — pops out on hover like Quick Access */}
+        <div
+          className="absolute top-1/2 -translate-y-1/2 pointer-events-none hidden md:block"
+          style={{ right: '-24px' }}
+        >
+          <div
+            className="opacity-10 rotate-0 scale-100 group-hover:opacity-90 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300"
+            style={{
+              maskImage: 'linear-gradient(to right, black 20%, transparent 100%)',
+              WebkitMaskImage: 'linear-gradient(to right, black 20%, transparent 100%)',
+            }}
+          >
+            <FontAwesomeIcon icon={faHome} style={{ fontSize: '220px', color: '#ffffff' }} />
           </div>
+        </div>
+      </section>
 
-          {/* Right: illustration split */}
-          <div className="relative hidden lg:grid grid-rows-2 h-full min-h-[420px]">
-            {/* Top: Memphis illustration */}
-            <div className="flex items-center justify-center p-4 border-b border-white/5">
-              <div className="w-full max-w-xs h-[200px]">
-                <MemphisIllustration />
+      {/* ══════════════════════════════════════════════════════════
+          BUDGET STATS CARD
+      ══════════════════════════════════════════════════════════ */}
+      <BudgetStatsCard summary={summary} />
+
+      {/* ══════════════════════════════════════════════════════════
+          QUICK ACCESS GRID
+      ══════════════════════════════════════════════════════════ */}
+      <section className="mb-8">
+        <motion.h2 initial={{ opacity:0, x:-8 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.4 }}
+          className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <span className="w-1 h-4 rounded-full bg-blue-500 inline-block" />
+          Quick Access
+        </motion.h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          {visibleLinks.map((link, i) => (
+            <motion.button
+              key={link.href}
+              initial={{ opacity:0, scale:0.92 }}
+              animate={{ opacity:1, scale:1 }}
+              transition={{ delay: 0.15 + i * 0.05, duration:0.35, type:'spring', stiffness:260 }}
+              onClick={() => navigate(link.href)}
+              className="relative text-left rounded-2xl p-6 min-h-[110px] flex flex-col justify-center border border-[#343a40] hover:border-white/20 transition-colors group overflow-hidden cursor-pointer"
+              style={{ backgroundColor: '#212529' }}
+            >
+              {/* Icon overlay — pops out white on hover */}
+              <div
+                className="absolute top-1/2 -translate-y-1/2 pointer-events-none"
+                style={{
+                  right: '-18px',
+                  transition: 'opacity 0.25s ease, transform 0.25s ease, mask-image 0.25s ease',
+                }}
+              >
+                {/* Faded state wrapper — becomes opaque on group hover via CSS */}
+                <div
+                  className="opacity-10 rotate-0 scale-100 group-hover:opacity-90 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300"
+                  style={{
+                    maskImage: 'linear-gradient(to right, black 30%, transparent 100%)',
+                    WebkitMaskImage: 'linear-gradient(to right, black 30%, transparent 100%)',
+                  }}
+                >
+                  <FontAwesomeIcon icon={link.faIcon} style={{ fontSize: '80px', color: '#ffffff' }} />
+                </div>
               </div>
-            </div>
-            {/* Bottom: mini live stats */}
-            <div className="grid grid-cols-3 divide-x divide-white/8">
-              {[
-                { label:'Total Budget',  value: summary ? formatCompact(summary.totalBudget) : '—',                color:'#3b82f6' },
-                { label:'Utilization',   value: summary ? `${Math.round(summary.utilizationPct ?? 0)}%` : '—',    color:'#f59e0b' },
-                { label:'Active Sectors',value: summary ? String(summary.sectorCount) : '—',                      color:'#10b981' },
-              ].map((s, i) => (
-                <motion.div key={s.label}
-                  initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }}
-                  transition={{ delay: 0.5 + i * 0.1 }}
-                  className="flex flex-col justify-center items-center gap-1 p-5">
-                  <TrendingUp size={14} style={{ color:s.color }} className="opacity-60" />
-                  <p className="text-xl font-extrabold" style={{ color:s.color }}>{s.value}</p>
-                  <p className="text-[10px] uppercase tracking-wider text-white/30 font-bold text-center">{s.label}</p>
-                </motion.div>
-              ))}
-            </div>
-          </div>
+
+              <div className="relative">
+                <p className="text-base font-bold text-white mb-1">{link.label}</p>
+                <p className="text-xs text-gray-400 leading-snug">{link.desc}</p>
+              </div>
+            </motion.button>
+          ))}
         </div>
       </section>
 
@@ -546,11 +663,11 @@ export default function HomePage() {
       ══════════════════════════════════════════════════════════ */}
       <section className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-8">
         {/* Network graph (3/5) */}
-        <div className="lg:col-span-3 rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-sm">
+        <div className="lg:col-span-3 rounded-2xl border border-[#343a40] p-5" style={{ backgroundColor: '#212529' }}>
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-sm font-bold text-white">Budget Hierarchy Graph</h2>
-              <p className="text-[11px] text-white/30 mt-0.5">Live node map — funds flow from pool to sectors</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">Live node map — funds flow from pool to sectors</p>
             </div>
             <motion.span className="text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded-lg"
               style={{ color:'#34d399', background:'rgba(16,185,129,0.1)', border:'1px solid rgba(16,185,129,0.2)' }}
@@ -564,30 +681,30 @@ export default function HomePage() {
         </div>
 
         {/* Utilization bars (2/5) */}
-        <div className="lg:col-span-2 rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-sm flex flex-col">
+        <div className="lg:col-span-2 rounded-2xl border border-gray-200 bg-white/[0.03] p-5 backdrop-blur-sm flex flex-col">
           <div className="mb-4">
-            <h2 className="text-sm font-bold text-white">Sector Utilization</h2>
-            <p className="text-[11px] text-white/30 mt-0.5">Budget utilization % by sector</p>
+            <h2 className="text-sm font-bold text-gray-900">Sector Utilization</h2>
+            <p className="text-[11px] text-gray-400 mt-0.5">Budget utilization % by sector</p>
           </div>
           <div className="flex-1">
             {barData.length > 0 ? (
               <LiveBarChart data={barData} />
             ) : (
-              <div className="flex flex-col items-center justify-center h-full gap-3 text-white/20">
-                <Network size={32} className="opacity-30" />
+              <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-400">
+                <FontAwesomeIcon icon={faProjectDiagram} style={{ fontSize: '32px' }} className="opacity-30" />
                 <p className="text-xs">No sector data yet</p>
               </div>
             )}
           </div>
           {summary && (
-            <motion.div className="mt-5 pt-4 border-t border-white/8 grid grid-cols-2 gap-3"
+            <motion.div className="mt-5 pt-4 border-t border-gray-200 grid grid-cols-2 gap-3"
               initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:1 }}>
               <div className="text-center">
-                <p className="text-[10px] text-white/30 uppercase tracking-wider font-bold">Allocations</p>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">Allocations</p>
                 <p className="text-lg font-extrabold text-blue-400">{summary.activeAllocations}</p>
               </div>
               <div className="text-center">
-                <p className="text-[10px] text-white/30 uppercase tracking-wider font-bold">Available</p>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">Available</p>
                 <p className="text-lg font-extrabold text-emerald-400">{formatCompact(summary.availableBalance)}</p>
               </div>
             </motion.div>
@@ -605,43 +722,7 @@ export default function HomePage() {
         <CountingStat label="Allocations"     target={summary?.activeAllocations ?? 0}     color="#8b5cf6" delay={0.3}  />
       </section>
 
-      {/* ══════════════════════════════════════════════════════════
-          QUICK ACCESS GRID
-      ══════════════════════════════════════════════════════════ */}
-      <section className="mb-2">
-        <motion.h2 initial={{ opacity:0, x:-8 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.4 }}
-          className="text-base font-bold text-white mb-4 flex items-center gap-2">
-          <span className="w-1 h-4 rounded-full bg-blue-500 inline-block" />
-          Quick Access
-        </motion.h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          {visibleLinks.map((link, i) => (
-            <motion.button
-              key={link.href}
-              initial={{ opacity:0, scale:0.92 }}
-              animate={{ opacity:1, scale:1 }}
-              transition={{ delay: 0.15 + i * 0.05, duration:0.35, type:'spring', stiffness:260 }}
-              onClick={() => navigate(link.href)}
-              whileHover={{ y:-4, scale:1.03 }}
-              whileTap={{ scale:0.96 }}
-              className="relative text-left rounded-2xl p-4 border border-white/10 bg-white/[0.04] hover:bg-white/[0.07] transition-colors group overflow-hidden cursor-pointer"
-            >
-              {/* Background accent */}
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"
-                style={{ background:`radial-gradient(circle at 20% 20%, ${link.color}10 0%, transparent 70%)` }} />
 
-              <div className="relative">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3 transition-transform group-hover:scale-110"
-                  style={{ background:`${link.color}18`, border:`1px solid ${link.color}28` }}>
-                  <link.icon size={16} style={{ color:link.color }} />
-                </div>
-                <p className="text-sm font-bold text-white mb-0.5">{link.label}</p>
-                <p className="text-[11px] text-white/35 leading-snug">{link.desc}</p>
-              </div>
-            </motion.button>
-          ))}
-        </div>
-      </section>
     </div>
   );
 }

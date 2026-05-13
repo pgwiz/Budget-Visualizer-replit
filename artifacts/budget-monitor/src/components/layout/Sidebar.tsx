@@ -1,49 +1,43 @@
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  Home, LayoutDashboard, Network, ArrowLeftRight, RefreshCw,
-  Users, FileText, LogOut, Workflow, ShoppingCart, Package,
-  Shield, Settings2, X,
-} from 'lucide-react';
+  faHome, faChartPie, faFileAlt, faProjectDiagram, faExchangeAlt,
+  faShoppingCart, faBox, faUsers, faSitemap, faSyncAlt, faCog,
+  faSignOutAlt, faChartLine, faChevronDown, faChevronUp, faCircleNodes, faUser, faSignal,
+  faBell, faHistory, faGlobe, faTimes,
+} from '@fortawesome/free-solid-svg-icons';
 import { Link, useLocation } from 'wouter';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
-import { useLogout, getGetMeQueryKey } from '@workspace/api-client-react';
+import { useLogout, getGetMeQueryKey, useGetActiveCycle } from '@workspace/api-client-react';
 import { queryClient } from '@/lib/api';
 import { useSidebar } from '@/context/sidebar';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useState } from 'react';
 
-const ROLE_META: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  super_admin:     { label: 'System Administrator', color: '#f87171', bg: 'rgba(239,68,68,0.12)',    border: 'rgba(239,68,68,0.25)' },
-  ceo:             { label: 'Chief Executive',       color: '#fbbf24', bg: 'rgba(245,158,11,0.12)',  border: 'rgba(245,158,11,0.25)' },
-  ministry_head:   { label: 'Ministry Head',         color: '#60a5fa', bg: 'rgba(59,130,246,0.12)',  border: 'rgba(59,130,246,0.25)' },
-  department_head: { label: 'Department Head',       color: '#34d399', bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.25)' },
-  viewer:          { label: 'Read-only Viewer',      color: '#94a3b8', bg: 'rgba(148,163,184,0.08)', border: 'rgba(148,163,184,0.15)' },
-};
-
-function NavItem({ href, label, icon: Icon, active, onNavigate }: {
-  href: string; label: string; icon: React.ElementType; active: boolean; onNavigate?: () => void;
+function NavItem({ href, label, icon, active, onNavigate }: {
+  href: string; label: string; icon: any; active: boolean; onNavigate?: () => void;
 }) {
   return (
     <Link
       href={href}
       onClick={onNavigate}
       className={cn(
-        'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 group text-sm',
+        'flex items-center gap-3 px-3 py-2 mx-2 rounded-md transition-all duration-150 group text-sm',
         active
-          ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-          : 'text-white/55 hover:text-white hover:bg-white/5 border border-transparent',
+          ? 'bg-[#4B117A] text-white shadow-sm'
+          : 'text-gray-300 hover:text-white hover:bg-white/10',
       )}
     >
-      <Icon size={17} className={cn('shrink-0 transition-colors', active ? 'text-blue-400' : 'text-white/35 group-hover:text-white/60')} />
-      <span className="font-medium leading-none">{label}</span>
+      <FontAwesomeIcon icon={icon} className={cn('shrink-0 w-[18px] text-[15px]', active ? 'text-white' : 'text-gray-400 group-hover:text-white')} />
+      <span className="font-medium tracking-wide">{label}</span>
     </Link>
   );
 }
 
-function SectionLabel({ label, icon: Icon, color }: { label: string; icon?: React.ElementType; color?: string }) {
+function SectionLabel({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-2 px-3 pt-4 pb-1">
-      {Icon && <Icon size={11} style={{ color: color ?? 'rgba(255,255,255,0.25)' }} />}
-      <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: color ?? 'rgba(255,255,255,0.25)' }}>
+    <div className="px-3 pt-6 pb-2">
+      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
         {label}
       </span>
     </div>
@@ -54,6 +48,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const [location] = useLocation();
   const { user, isSuperAdmin, isCeo } = useAuth();
   const [, navigate] = useLocation();
+  const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(false);
+  const { data: cycle } = useGetActiveCycle();
 
   const logoutMutation = useLogout({
     mutation: {
@@ -65,77 +61,79 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     },
   });
 
-  const roleMeta = ROLE_META[user?.role ?? ''] ?? ROLE_META.viewer;
   const at = (href: string) => location === href || (href !== '/' && location.startsWith(href));
 
   return (
-    <>
-      {/* ── Logo ── */}
-      <div className="px-5 pt-6 pb-4 border-b border-white/6">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: 'linear-gradient(135deg,#3b82f6,#6366f1)' }}>
-            <Shield size={14} className="text-white" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-extrabold text-white leading-none">Budget Monitor</p>
-            <p className="text-[9px] text-white/25 uppercase tracking-wider mt-0.5 leading-none">Gov Resource System</p>
+    <div className="flex flex-col h-full bg-[#212529] border-r border-[#343a40]">
+      {/* ── Header ── */}
+      <div className="flex items-center border-b border-[#343a40] h-[60px]">
+        <div className="w-14 flex items-center justify-center border-r border-[#343a40] h-full">
+          <FontAwesomeIcon icon={faCircleNodes} className="text-white text-xl" />
+        </div>
+        <div className="flex-1 flex items-center justify-between px-3 h-full">
+          <div className="flex items-center gap-3 text-left truncate">
+            <div className="flex items-center justify-center shrink-0">
+              <FontAwesomeIcon icon={faUser} className="text-gray-400 w-5" />
+            </div>
+            <div className="truncate min-w-0">
+               <div className="text-sm text-gray-200 font-bold truncate">{user?.name || 'Current User'}</div>
+               <div className="text-[10px] text-gray-400 uppercase tracking-wider truncate">
+                 {(user?.role || 'User').replace('_', ' ')}
+               </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ── User identity badge ── */}
-      <div className="mx-3 mt-3 mb-1 px-3 py-2.5 rounded-xl border"
-        style={{ background: roleMeta.bg, borderColor: roleMeta.border }}>
-        <p className="text-xs font-bold text-white truncate leading-none">{user?.name}</p>
-        <p className="text-[10px] mt-0.5 font-semibold leading-none" style={{ color: roleMeta.color }}>
-          {roleMeta.label}
-        </p>
-      </div>
-
       {/* ── Navigation ── */}
-      <nav className="flex-1 overflow-y-auto px-2 py-2 space-y-0.5 scrollbar-thin">
-        <SectionLabel label="Main" />
-        <NavItem href="/"            label="Home"        icon={Home}            active={location === '/'} onNavigate={onNavigate} />
-        <NavItem href="/dashboard"   label="Dashboard"   icon={LayoutDashboard} active={at('/dashboard')} onNavigate={onNavigate} />
-        <NavItem href="/sectors"     label="Sectors"     icon={Network}         active={at('/sectors')} onNavigate={onNavigate} />
-        <NavItem href="/allocations" label="Allocations" icon={ArrowLeftRight}  active={at('/allocations')} onNavigate={onNavigate} />
-        <NavItem href="/procurement" label="Procurement" icon={ShoppingCart}    active={at('/procurement')} onNavigate={onNavigate} />
-        <NavItem href="/catalog"     label="Catalog"     icon={Package}         active={at('/catalog')} onNavigate={onNavigate} />
-        <NavItem href="/reports"     label="Reports"     icon={FileText}        active={at('/reports')} onNavigate={onNavigate} />
+      <nav className="flex-1 overflow-y-auto py-4 space-y-0.5 scrollbar-thin">
+        <NavItem href="/"            label="Home"        icon={faHome}            active={location === '/'} onNavigate={onNavigate} />
+        <NavItem href="/dashboard"   label="Dashboard"   icon={faChartPie} active={at('/dashboard')} onNavigate={onNavigate} />
+        <NavItem href="/reports"     label="Reports"     icon={faFileAlt}        active={at('/reports')} onNavigate={onNavigate} />
 
-        {isCeo && !isSuperAdmin && (
+        <SectionLabel label="Execution" />
+        <NavItem href="/sectors"     label="Sectors"     icon={faProjectDiagram}         active={at('/sectors')} onNavigate={onNavigate} />
+        <NavItem href="/allocations" label="Allocations" icon={faExchangeAlt}  active={at('/allocations')} onNavigate={onNavigate} />
+        <NavItem href="/procurement" label="Procurement" icon={faShoppingCart}    active={at('/procurement')} onNavigate={onNavigate} />
+        <NavItem href="/catalog"     label="Catalog"     icon={faBox}         active={at('/catalog')} onNavigate={onNavigate} />
+
+        {(isCeo || isSuperAdmin) && (
           <>
-            <SectionLabel label="Leadership" color="#fbbf24" />
-            <NavItem href="/users" label="Team & Users" icon={Users} active={at('/users')} onNavigate={onNavigate} />
+            <SectionLabel label="Administration" />
+            <NavItem href="/users"               label="Users"              icon={faUsers}    active={at('/users')} onNavigate={onNavigate} />
+            {isSuperAdmin && (
+              <>
+                <NavItem href="/hierarchy-designer"  label="Hierarchy Designer" icon={faSitemap} active={at('/hierarchy-designer')} onNavigate={onNavigate} />
+                <NavItem href="/cycles"              label="Budget Cycles"      icon={faSyncAlt} active={at('/cycles')} onNavigate={onNavigate} />
+              </>
+            )}
           </>
         )}
 
-        {isSuperAdmin && (
-          <>
-            <div className="mx-3 my-3 border-t border-white/8" />
-            <div className="flex items-center gap-2 px-3 pb-1">
-              <Settings2 size={11} className="text-rose-400/70" />
-              <span className="text-[9px] font-bold uppercase tracking-widest text-rose-400/70">Administration</span>
-            </div>
-            <NavItem href="/users"               label="Users"              icon={Users}    active={at('/users')} onNavigate={onNavigate} />
-            <NavItem href="/hierarchy-designer"  label="Hierarchy Designer" icon={Workflow} active={at('/hierarchy-designer')} onNavigate={onNavigate} />
-            <NavItem href="/cycles"              label="Budget Cycles"      icon={RefreshCw} active={at('/cycles')} onNavigate={onNavigate} />
-          </>
-        )}
+        <SectionLabel label="Workspace" />
+        <NavItem href="/notifications" label="Notifications" icon={faBell}    active={at('/notifications')} onNavigate={onNavigate} />
+        <NavItem href="/audit"         label="Audit Log"     icon={faHistory}  active={at('/audit')} onNavigate={onNavigate} />
+        <NavItem href="/public"        label="Public Portal" icon={faGlobe}    active={at('/public')} onNavigate={onNavigate} />
+        <NavItem href="/settings"      label="Settings"      icon={faCog}      active={at('/settings')} onNavigate={onNavigate} />
       </nav>
 
-      {/* ── Logout ── */}
-      <div className="px-2 pb-4 pt-2 border-t border-white/6">
-        <button
-          onClick={() => logoutMutation.mutate()}
-          className="flex items-center gap-3 px-3 py-2.5 w-full rounded-xl text-rose-400/70 hover:text-rose-400 hover:bg-rose-400/8 transition-all group text-sm"
-        >
-          <LogOut size={17} className="shrink-0 transition-colors" />
-          <span className="font-medium">Sign out</span>
-        </button>
+      {/* ── System Status ── */}
+      <div className="h-12 border-t border-[#343a40] flex items-center gap-3 px-4 text-gray-300 w-full bg-[#212529]/50">
+        <FontAwesomeIcon icon={faSignal} className="text-emerald-400 w-5 animate-pulse" />
+        <span className="text-xs font-semibold tracking-wide">
+          {cycle?.name ?? 'Budget Monitor'} · <span className="text-emerald-400">Live</span>
+        </span>
       </div>
-    </>
+
+      {/* ── Footer / Sign Out ── */}
+      <button 
+        onClick={() => logoutMutation.mutate()}
+        className="h-12 border-t border-[#343a40] flex items-center gap-3 px-4 hover:bg-white/5 cursor-pointer transition-colors text-gray-300 hover:text-white w-full"
+      >
+        <FontAwesomeIcon icon={faSignOutAlt} className="text-gray-400 w-5" />
+        <span className="text-sm font-medium tracking-wide">Sign out</span>
+      </button>
+    </div>
   );
 }
 
@@ -143,8 +141,7 @@ export function Sidebar() {
   const { isOpen, close } = useSidebar();
 
   const sidebarStyle: React.CSSProperties = {
-    background: 'rgba(9,14,29,0.97)',
-    backdropFilter: 'blur(20px)',
+    background: '#212529',
   };
 
   return (
@@ -188,7 +185,7 @@ export function Sidebar() {
                 onClick={close}
                 className="absolute top-4 right-4 p-1.5 rounded-lg text-white/30 hover:text-white hover:bg-white/8 transition-colors z-10"
               >
-                <X size={18} />
+                <FontAwesomeIcon icon={faTimes} className="text-base" />
               </button>
               <SidebarContent onNavigate={close} />
             </motion.aside>

@@ -16,7 +16,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency, queryClient } from '@/lib/api';
-import { Plus, RotateCcw, Search, Filter, Eye, EyeOff } from 'lucide-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPlus, faUndo, faSearch, faFilter, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { Input } from '@/components/ui/input';
 import {
   Dialog,
@@ -43,7 +44,8 @@ export default function AllocationsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const { data: allocations, isLoading } = useListAllocations({ advanced: advancedView });
-  const { data: sectors } = useListSectors();
+  const { data: rawSectors } = useListSectors();
+  const sectors = Array.isArray(rawSectors) ? rawSectors : [];
   const { data: cycle } = useGetActiveCycle();
 
   // Filter to only show immediate children for allocation targets
@@ -116,15 +118,15 @@ export default function AllocationsPage() {
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-white">Allocations</h2>
-          <p className="text-white/40 mt-1">Resource transfer and audit trail</p>
+          <h2 className="text-3xl font-bold text-gray-900">Allocations</h2>
+          <p className="text-gray-500 mt-1">Resource transfer and audit trail</p>
         </div>
         
         <div className="flex items-center gap-3">
           {/* Advanced View Toggle */}
-          <div className="flex items-center gap-2 glass px-3 py-2 rounded-xl border border-white/10">
-            <span className="text-xs text-white/50">
-              {advancedView ? <Eye size={14} className="inline mr-1" /> : <EyeOff size={14} className="inline mr-1" />}
+          <div className="flex items-center gap-2 glass px-3 py-2 rounded-xl border border-gray-200">
+            <span className="text-xs text-gray-500">
+              {advancedView ? <FontAwesomeIcon icon={faEye} className="mr-1" /> : <FontAwesomeIcon icon={faEyeSlash} className="mr-1" />}
               {advancedView ? 'Full View' : 'Direct Only'}
             </span>
             <Switch
@@ -137,49 +139,49 @@ export default function AllocationsPage() {
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
               <Button className="bg-blue-600 hover:bg-blue-500 text-white gap-2 h-11 px-6 rounded-xl">
-                <Plus size={18} />
+                <FontAwesomeIcon icon={faPlus} />
                 New Allocation
               </Button>
             </DialogTrigger>
-            <DialogContent className="glass border-white/10 text-white max-w-md">
+            <DialogContent className="glass border-gray-200 text-gray-900 max-w-md bg-white">
               <DialogHeader>
                 <DialogTitle>New Allocation</DialogTitle>
-                <DialogDescription className="text-white/40">
+                <DialogDescription className="text-gray-500">
                   Transfer budget resources to an immediate sub-sector.
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleCreate} className="space-y-4 py-4">
                 <div className="space-y-2">
                   <Label>Active Cycle</Label>
-                  <Input value={cycle?.name || ''} disabled className="glass border-white/10" />
+                  <Input value={cycle?.name || ''} disabled className="border-gray-200 bg-gray-50 text-gray-900" />
                 </div>
                 <div className="space-y-2">
                   <Label>To Sub-Sector</Label>
                   <Select name="toSectorId" required>
-                    <SelectTrigger className="glass border-white/10">
+                    <SelectTrigger className="border-gray-200 bg-gray-50 text-gray-900">
                       <SelectValue placeholder="Select target sub-sector" />
                     </SelectTrigger>
-                    <SelectContent className="glass border-white/10 text-white">
+                    <SelectContent className="border-gray-200 bg-white text-gray-900">
                       {allocableTargets.map((s: SectorWithStats) => (
                         <SelectItem key={s.id} value={s.id.toString()}>{s.name} ({s.code})</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                   {allocableTargets.length === 0 && (
-                    <p className="text-xs text-amber-400/70">No allocable sub-sectors found. You can only allocate to your immediate children.</p>
+                    <p className="text-xs text-amber-600">No allocable sub-sectors found. You can only allocate to your immediate children.</p>
                   )}
                 </div>
                 <div className="space-y-2">
                   <Label>Amount (KES)</Label>
-                  <Input name="amount" type="number" step="0.01" required placeholder="0.00" className="glass border-white/10" />
+                  <Input name="amount" type="number" step="0.01" required placeholder="0.00" className="border-gray-200 bg-gray-50 text-gray-900" />
                 </div>
                 <div className="space-y-2">
                   <Label>Comment</Label>
-                  <Input name="comment" placeholder="Purpose of allocation" className="glass border-white/10" />
+                  <Input name="comment" placeholder="Purpose of allocation" className="border-gray-200 bg-gray-50 text-gray-900" />
                 </div>
                 <DialogFooter className="pt-4">
-                  <Button type="button" variant="ghost" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
-                  <Button type="submit" className="bg-blue-600 hover:bg-blue-500" disabled={createMutation.isPending}>
+                  <Button type="button" variant="ghost" onClick={() => setIsCreateOpen(false)} className="text-gray-600">Cancel</Button>
+                  <Button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white" disabled={createMutation.isPending}>
                     {createMutation.isPending ? 'Creating...' : 'Confirm Allocation'}
                   </Button>
                 </DialogFooter>
@@ -190,22 +192,25 @@ export default function AllocationsPage() {
       </div>
 
       <GlassCard className="p-0 overflow-hidden">
-        <div className="p-4 border-b border-white/10 flex flex-col sm:flex-row gap-4 bg-white/5">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-white/20" />
-            <Input
+        <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row gap-4 bg-gray-50">
+          <div className="relative flex items-center flex-1">
+            <input
               placeholder="Search allocations..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="pl-10 glass border-white/10 h-10"
+              className="w-full h-11 pl-5 pr-14 rounded-full border border-gray-200 bg-white text-gray-900 text-sm placeholder:text-gray-400 focus:outline-none focus:border-[#4B117A]/40 focus:ring-2 focus:ring-[#4B117A]/10 transition-all"
             />
+            <button className="absolute right-1.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0 hover:opacity-90 active:scale-95 transition-all"
+              style={{ background: '#4B117A' }}>
+              <FontAwesomeIcon icon={faSearch} className="text-white text-[13px]" />
+            </button>
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="glass border-white/10 w-[160px]">
-              <Filter size={14} className="mr-2 text-white/40" />
+            <SelectTrigger className="border-gray-200 bg-white w-[160px] text-gray-900">
+              <FontAwesomeIcon icon={faFilter} className="mr-2 text-gray-400" />
               <SelectValue placeholder="Status" />
             </SelectTrigger>
-            <SelectContent className="glass border-white/10 text-white">
+            <SelectContent className="border-gray-200 bg-white text-gray-900">
               <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
@@ -220,41 +225,41 @@ export default function AllocationsPage() {
         ) : (
           <div className="overflow-x-auto">
           <Table>
-            <TableHeader className="bg-white/5">
-              <TableRow className="hover:bg-transparent border-white/10">
-                <TableHead className="text-white/40">ID</TableHead>
-                <TableHead className="text-white/40">From</TableHead>
-                <TableHead className="text-white/40">To</TableHead>
-                <TableHead className="text-white/40 text-right">Amount</TableHead>
-                <TableHead className="text-white/40">Status</TableHead>
-                <TableHead className="text-white/40">Date</TableHead>
-                <TableHead className="text-white/40 text-right">Actions</TableHead>
+            <TableHeader className="bg-gray-50 border-b border-gray-200">
+              <TableRow className="hover:bg-transparent border-gray-200">
+                <TableHead className="text-gray-500 font-semibold">ID</TableHead>
+                <TableHead className="text-gray-500 font-semibold">From</TableHead>
+                <TableHead className="text-gray-500 font-semibold">To</TableHead>
+                <TableHead className="text-gray-500 font-semibold text-right">Amount</TableHead>
+                <TableHead className="text-gray-500 font-semibold">Status</TableHead>
+                <TableHead className="text-gray-500 font-semibold">Date</TableHead>
+                <TableHead className="text-gray-500 font-semibold text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredAllocations.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-white/30 py-12">
+                  <TableCell colSpan={7} className="text-center text-gray-500 py-12">
                     {searchQuery || statusFilter !== 'all' ? 'No matching allocations' : 'No allocations yet'}
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredAllocations.map((item: AllocationWithDetails) => (
-                  <TableRow key={item.id} className="hover:bg-white/5 border-white/5 transition-colors">
-                    <TableCell className="text-white/40 font-mono text-xs">#{item.id}</TableCell>
-                    <TableCell className="text-white font-medium">{item.fromSector?.name || 'System'}</TableCell>
-                    <TableCell className="text-white font-medium">{item.toSector?.name}</TableCell>
-                    <TableCell className="text-right text-white font-bold">{formatCurrency(item.amount)}</TableCell>
+                  <TableRow key={item.id} className="hover:bg-gray-50 border-gray-100 transition-colors">
+                    <TableCell className="text-gray-500 font-mono text-xs">#{item.id}</TableCell>
+                    <TableCell className="text-gray-900 font-medium">{item.fromSector?.name || 'System'}</TableCell>
+                    <TableCell className="text-gray-900 font-medium">{item.toSector?.name}</TableCell>
+                    <TableCell className="text-right text-gray-900 font-bold">{formatCurrency(item.amount)}</TableCell>
                     <TableCell>
                       <Badge className={
-                        item.status === 'active' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
-                        item.status === 'revoked' ? "bg-rose-500/10 text-rose-400 border-rose-500/20" :
-                        "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                        item.status === 'active' ? "bg-emerald-50 text-emerald-600 border-emerald-200" :
+                        item.status === 'revoked' ? "bg-red-50 text-red-600 border-red-200" :
+                        "bg-amber-50 text-amber-600 border-amber-200"
                       }>
                         {item.status.toUpperCase()}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-white/40 text-xs">
+                    <TableCell className="text-gray-500 text-xs">
                       {new Date(item.createdAt).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-right">
@@ -262,13 +267,13 @@ export default function AllocationsPage() {
                         <Button 
                           variant="ghost" 
                           size="icon"
-                          className="text-rose-400 hover:bg-rose-400/10 rounded-lg"
+                          className="text-red-500 hover:bg-red-50 hover:text-red-600 rounded-lg"
                           onClick={() => {
                             setSelectedAllocation(item.id);
                             setIsRevokeOpen(true);
                           }}
                         >
-                          <RotateCcw size={16} />
+                          <FontAwesomeIcon icon={faUndo} />
                         </Button>
                       )}
                     </TableCell>
@@ -282,10 +287,10 @@ export default function AllocationsPage() {
       </GlassCard>
 
       <Dialog open={isRevokeOpen} onOpenChange={setIsRevokeOpen}>
-        <DialogContent className="glass border-white/10 text-white">
+        <DialogContent className="glass border-gray-200 text-gray-900 bg-white">
           <DialogHeader>
-            <DialogTitle className="text-rose-400">Revoke Allocation</DialogTitle>
-            <DialogDescription className="text-white/40">
+            <DialogTitle className="text-red-600">Revoke Allocation</DialogTitle>
+            <DialogDescription className="text-gray-500">
               This action will return the allocated funds to the parent sector. This cannot be undone.
             </DialogDescription>
           </DialogHeader>
@@ -296,14 +301,14 @@ export default function AllocationsPage() {
                 value={revokeReason} 
                 onChange={e => setRevokeReason(e.target.value)}
                 placeholder="e.g. Budget reallocation, error in entry" 
-                className="glass border-white/10" 
+                className="border-gray-200 bg-gray-50 text-gray-900" 
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setIsRevokeOpen(false)}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setIsRevokeOpen(false)} className="text-gray-600">Cancel</Button>
             <Button 
-              className="bg-rose-600 hover:bg-rose-500 text-white" 
+              className="bg-red-600 hover:bg-red-500 text-white" 
               onClick={handleRevoke}
               disabled={revokeMutation.isPending || !revokeReason}
             >

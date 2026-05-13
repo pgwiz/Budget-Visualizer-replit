@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, ChevronRight, ZoomIn, ChevronUp, ChevronLeft, Maximize2, Minimize2, Layers, List } from 'lucide-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faChevronRight, faChevronDown, faProjectDiagram, faUndo, faGripVertical, faExpand, faCompress, faTimes, faExternalLinkAlt, faChartLine, faWallet, faSearchPlus, faChevronUp, faChevronLeft, faLayerGroup, faList, faCog, faPercentage, faHome, faDownload, faCheck, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { SectorTreeNode } from '@workspace/api-client-react';
 import { UtilizationRing } from './UtilizationRing';
 import { NodeDetailPanel } from './NodeDetailPanel';
@@ -99,12 +100,12 @@ function RootNode({
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-[9px] sm:text-[10px] uppercase tracking-widest text-blue-400/60 font-bold">Active Cycle</div>
-          <div className="text-sm sm:text-base font-bold text-white mt-0.5 truncate">{cycleName || 'Government Budget'}</div>
+          <div className="text-sm sm:text-base font-bold text-gray-900 mt-0.5 truncate">{cycleName || 'Government Budget'}</div>
           <div className="flex items-center gap-3 sm:gap-4 mt-1.5">
-            <span className="text-[10px] sm:text-xs text-white/50">
+            <span className="text-[10px] sm:text-xs text-gray-600">
               Budget: <span className="text-blue-300 font-semibold" title={formatCurrency(totalBudget)}>{formatCompact(totalBudget)}</span>
             </span>
-            <span className="text-[10px] sm:text-xs text-white/50">
+            <span className="text-[10px] sm:text-xs text-gray-600">
               Sectors: <span className="text-blue-300 font-semibold">{nodeCount}</span>
             </span>
           </div>
@@ -169,19 +170,19 @@ function HierarchyNodeCard({ node, depth, isSelected, onSelect, onFocus, default
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-bold text-white text-xs sm:text-sm truncate">{node.name}</span>
+                <span className="font-bold text-gray-900 text-xs sm:text-sm truncate">{node.name}</span>
                 <Badge variant="outline" className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider shrink-0 px-1.5 py-0">
                   {node.code}
                 </Badge>
               </div>
               <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
-                <span className="text-[10px] text-white/40">
+                <span className="text-[10px] text-gray-500">
                   Received{' '}
-                  <span className="text-white/70 font-semibold" title={formatCurrency(node.netAllocated)}>
+                  <span className="text-gray-700 font-semibold" title={formatCurrency(node.netAllocated)}>
                     {formatCompact(node.netAllocated)}
                   </span>
                 </span>
-                <span className="text-[10px] text-white/40">
+                <span className="text-[10px] text-gray-500">
                   Free{' '}
                   <span
                     className={`font-semibold ${node.availableBalance < 0 ? 'text-rose-400/80' : 'text-emerald-400/80'}`}
@@ -191,7 +192,7 @@ function HierarchyNodeCard({ node, depth, isSelected, onSelect, onFocus, default
                   </span>
                 </span>
               </div>
-              <div className="mt-2 h-1 w-full bg-white/10 rounded-full overflow-hidden">
+              <div className="mt-2 h-1 w-full bg-gray-100 rounded-full overflow-hidden">
                 <motion.div
                   className="h-full rounded-full"
                   initial={{ width: 0 }}
@@ -213,19 +214,19 @@ function HierarchyNodeCard({ node, depth, isSelected, onSelect, onFocus, default
                 onClick={handleSelect}
                 className={cn(
                   'p-1.5 rounded-lg transition-colors',
-                  isSelected ? 'bg-blue-500/30 text-blue-400' : 'hover:bg-white/10 text-white/30 hover:text-white/70',
+                  isSelected ? 'bg-blue-500/30 text-blue-400' : 'hover:bg-gray-100 text-gray-400 hover:text-gray-700',
                 )}
                 title="View details"
               >
-                <ZoomIn size={13} />
+                <FontAwesomeIcon icon={faSearchPlus} className={`text-[${13}px] `} />
               </button>
               {hasChildren && (
                 <button
                   onClick={handleToggle}
-                  className="p-1.5 rounded-lg hover:bg-white/10 text-white/30 hover:text-white/70 transition-colors"
+                  className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
                   title={expanded ? 'Collapse' : 'Expand'}
                 >
-                  {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                  {expanded ? <FontAwesomeIcon icon={faChevronUp} className={`text-[${13}px] `} /> : <FontAwesomeIcon icon={faChevronDown} className={`text-[${13}px] `} />}
                 </button>
               )}
             </div>
@@ -243,19 +244,19 @@ function HierarchyNodeCard({ node, depth, isSelected, onSelect, onFocus, default
               onClick={handleSelect}
               className={cn(
                 'p-1 rounded-md transition-colors',
-                isSelected ? 'bg-blue-500/30 text-blue-400' : 'hover:bg-white/10 text-white/20 hover:text-white/60',
+                isSelected ? 'bg-blue-500/30 text-blue-400' : 'hover:bg-gray-100 text-gray-400 hover:text-gray-600',
               )}
               title="View details"
             >
-              <ZoomIn size={11} />
+              <FontAwesomeIcon icon={faSearchPlus} className={`text-[${11}px] `} />
             </button>
             {hasChildren && (
               <button
                 onClick={handleToggle}
-                className="p-1 rounded-md hover:bg-white/10 text-white/20 hover:text-white/60 transition-colors"
+                className="p-1 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
                 title={expanded ? 'Collapse' : 'Expand'}
               >
-                {expanded ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+                {expanded ? <FontAwesomeIcon icon={faChevronUp} className={`text-[${11}px] `} /> : <FontAwesomeIcon icon={faChevronDown} className={`text-[${11}px] `} />}
               </button>
             )}
           </div>
@@ -264,14 +265,14 @@ function HierarchyNodeCard({ node, depth, isSelected, onSelect, onFocus, default
         <div className="flex items-center gap-2.5">
           <UtilizationRing value={pct} size={40} strokeWidth={3.5} className="shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-[9px] sm:text-[10px] font-bold text-white truncate leading-tight">{node.name}</p>
-            <p className="text-[8px] sm:text-[9px] text-white/40 mt-0.5 leading-tight">
+            <p className="text-[9px] sm:text-[10px] font-bold text-gray-900 truncate leading-tight">{node.name}</p>
+            <p className="text-[8px] sm:text-[9px] text-gray-500 mt-0.5 leading-tight">
               Rcvd{' '}
-              <span className="text-white/65 font-semibold" title={formatCurrency(node.netAllocated)}>
+              <span className="text-gray-900/65 font-semibold" title={formatCurrency(node.netAllocated)}>
                 {formatCompact(node.netAllocated)}
               </span>
             </p>
-            <p className="text-[8px] sm:text-[9px] text-white/40 leading-tight">
+            <p className="text-[8px] sm:text-[9px] text-gray-500 leading-tight">
               Free{' '}
               <span
                 className={`font-semibold ${node.availableBalance < 0 ? 'text-rose-400' : 'text-emerald-400/80'}`}
@@ -283,7 +284,7 @@ function HierarchyNodeCard({ node, depth, isSelected, onSelect, onFocus, default
           </div>
         </div>
 
-        <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+        <div className="h-1 w-full bg-gray-100 rounded-full overflow-hidden">
           <motion.div
             className="h-full rounded-full"
             initial={{ width: 0 }}
@@ -301,7 +302,7 @@ function HierarchyNodeCard({ node, depth, isSelected, onSelect, onFocus, default
         </div>
 
         {hasMoreChildren && !expanded && (
-          <p className="text-[8px] text-white/25 italic text-center">
+          <p className="text-[8px] text-gray-400 italic text-center">
             +{(node.childCount ?? 0) - (node.children?.length ?? 0)} more below
           </p>
         )}
@@ -392,7 +393,7 @@ function ChildrenLevel({
       />
 
       {nodes.length === 1 ? (
-        <div className="w-full pl-4 sm:pl-6 border-l-2 border-white/5">
+        <div className="w-full pl-4 sm:pl-6 border-l-2 border-gray-100">
           <HierarchyNodeCard
             node={nodes[0]}
             depth={depth}
@@ -521,14 +522,15 @@ export function BudgetHierarchyTree({
     }
   }, []);
 
-  const allFlat = flattenNodes(nodes);
-  const totalAllocated = nodes.reduce((s, n) => s + n.netAllocated, 0);
+  const safeNodes = Array.isArray(nodes) ? nodes : [];
+  const allFlat = flattenNodes(safeNodes);
+  const totalAllocated = safeNodes.reduce((s, n) => s + n.netAllocated, 0);
   const totalNodes = allFlat.length;
 
   // Determine displayed nodes
-  let displayNodes = nodes;
+  let displayNodes = safeNodes;
   if (focusedNodeId !== null) {
-    const focusNode = findNodeById(nodes, focusedNodeId);
+    const focusNode = findNodeById(safeNodes, focusedNodeId);
     if (focusNode) {
       if (viewMode === 'minimalist') {
         displayNodes = [{ ...focusNode }];
@@ -545,35 +547,35 @@ export function BudgetHierarchyTree({
       {/* Controls */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-6">
         {/* View Mode Toggle */}
-        <div className="flex items-center gap-1 glass px-2 py-1 rounded-xl border border-white/10">
+        <div className="flex items-center gap-1 glass px-2 py-1 rounded-xl border border-gray-200">
           <button
             onClick={() => setViewMode('full')}
             className={cn(
               'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all',
-              viewMode === 'full' ? 'bg-blue-500/20 text-blue-400 font-semibold' : 'text-white/40 hover:text-white/60'
+              viewMode === 'full' ? 'bg-blue-500/20 text-blue-400 font-semibold' : 'text-gray-500 hover:text-gray-600'
             )}
           >
-            <Maximize2 size={12} /> Full
+            <FontAwesomeIcon icon={faExpand} className={`text-[${12}px] `} /> Full
           </button>
           <button
             onClick={() => setViewMode('minimalist')}
             className={cn(
               'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all',
-              viewMode === 'minimalist' ? 'bg-blue-500/20 text-blue-400 font-semibold' : 'text-white/40 hover:text-white/60'
+              viewMode === 'minimalist' ? 'bg-blue-500/20 text-blue-400 font-semibold' : 'text-gray-500 hover:text-gray-600'
             )}
           >
-            <Minimize2 size={12} /> Minimalist
+            <FontAwesomeIcon icon={faCompress} className={`text-[${12}px] `} /> Minimalist
           </button>
         </div>
 
         {/* Start From dropdown */}
         <div className="flex items-center gap-2">
-          <span className="text-xs text-white/40">Focus:</span>
+          <span className="text-xs text-gray-500">Focus:</span>
           <Select value={startFromId || 'root'} onValueChange={handleStartFromChange}>
-            <SelectTrigger className="glass border-white/10 h-8 text-xs w-[180px] sm:w-[220px]">
+            <SelectTrigger className="glass border-gray-200 h-8 text-xs w-[180px] sm:w-[220px]">
               <SelectValue placeholder="Select starting node" />
             </SelectTrigger>
-            <SelectContent className="glass border-white/10 text-white max-h-60">
+            <SelectContent className="glass border-gray-200 text-gray-900 max-h-60">
               <SelectItem value="root">All (Root)</SelectItem>
               {allFlat.map(n => (
                 <SelectItem key={n.id} value={n.id.toString()}>
@@ -590,9 +592,9 @@ export function BudgetHierarchyTree({
             variant="outline"
             size="sm"
             onClick={handleBack}
-            className="glass border-white/10 text-white/60 hover:text-white gap-1.5 h-8 text-xs"
+            className="glass border-gray-200 text-gray-600 hover:text-gray-900 gap-1.5 h-8 text-xs"
           >
-            <ChevronLeft size={14} /> Previous
+            <FontAwesomeIcon icon={faChevronLeft} className={`text-[${14}px] `} /> Previous
           </Button>
         )}
 
@@ -606,7 +608,7 @@ export function BudgetHierarchyTree({
           ].map(({ label, color }) => (
             <div key={label} className="flex items-center gap-1">
               <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
-              <span className="text-[9px] sm:text-[10px] text-white/40">{label}</span>
+              <span className="text-[9px] sm:text-[10px] text-gray-500">{label}</span>
             </div>
           ))}
         </div>
@@ -636,10 +638,10 @@ export function BudgetHierarchyTree({
 
           {focusedNodeId !== null && (
             <div className="flex items-center gap-2 mb-4">
-              <Layers size={14} className="text-blue-400" />
-              <span className="text-xs text-white/50">
-                Focused on: <span className="text-white font-semibold">{displayNodes[0]?.name}</span>
-                {displayNodes[0]?.code && <span className="text-white/30 ml-1">({displayNodes[0].code})</span>}
+              <FontAwesomeIcon icon={faLayerGroup} className={`text-[${14}px] text-blue-400`} />
+              <span className="text-xs text-gray-600">
+                Focused on: <span className="text-gray-900 font-semibold">{displayNodes[0]?.name}</span>
+                {displayNodes[0]?.code && <span className="text-gray-400 ml-1">({displayNodes[0].code})</span>}
               </span>
             </div>
           )}
@@ -654,7 +656,7 @@ export function BudgetHierarchyTree({
           >
             {displayNodes.map((node) => (
               <div key={node.id} className="flex flex-col items-center">
-                {focusedNodeId === null && <div className="w-px h-5 bg-white/10" />}
+                {focusedNodeId === null && <div className="w-px h-5 bg-gray-100" />}
                 <HierarchyNodeCard
                   node={node}
                   depth={0}
@@ -669,8 +671,8 @@ export function BudgetHierarchyTree({
           </div>
 
           {displayNodes.length === 0 && (
-            <div className="flex flex-col items-center py-16 text-white/20">
-              <ChevronRight size={48} className="mb-3 opacity-30" />
+            <div className="flex flex-col items-center py-16 text-gray-400">
+              <FontAwesomeIcon icon={faChevronRight} className={`text-[${48}px] mb-3 opacity-30`} />
               <p className="text-sm">No sectors to display</p>
             </div>
           )}

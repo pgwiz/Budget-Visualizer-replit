@@ -12,6 +12,10 @@ import purchaseOrdersRouter from "./purchase-orders";
 import sectorControlsRouter from "./sector-controls";
 import approvalLimitsRouter from "./approval-limits";
 import supabaseRouter from "./supabase";
+import notificationsRouter from "./notifications";
+import auditRouter from "./audit";
+import publicRouter from "./public";
+import seedRouter from "./seed";
 
 const router = Router();
 
@@ -28,5 +32,10 @@ router.use(purchaseOrdersRouter);
 router.use(sectorControlsRouter);
 router.use(approvalLimitsRouter);
 router.use(supabaseRouter);
+router.use(notificationsRouter);
+router.use(auditRouter);
+router.use(publicRouter);
+router.use(seedRouter);
 
 export default router;
+

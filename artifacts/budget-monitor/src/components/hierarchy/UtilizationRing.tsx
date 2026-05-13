@@ -65,7 +65,7 @@ export function UtilizationRing({
           <span className={cn('font-bold leading-none', colors.text, size >= 80 ? 'text-base' : 'text-xs')}>
             {Math.round(clamped)}%
           </span>
-          {size >= 80 && <span className="text-[9px] text-white/30 mt-0.5 uppercase tracking-wider">used</span>}
+          {size >= 80 && <span className="text-[9px] text-gray-400 mt-0.5 uppercase tracking-wider">used</span>}
         </div>
       )}
     </div>

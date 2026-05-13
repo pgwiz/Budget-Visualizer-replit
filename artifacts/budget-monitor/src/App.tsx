@@ -20,6 +20,10 @@ import CyclesPage from "@/pages/CyclesPage";
 import UsersPage from "@/pages/UsersPage";
 import ReportsPage from "@/pages/ReportsPage";
 import HierarchyDesignerPage from "@/pages/HierarchyDesignerPage";
+import DocumentationPage from "@/pages/DocumentationPage";
+import NotificationsPage from "@/pages/NotificationsPage";
+import AuditPage from "@/pages/AuditPage";
+import PublicPage from "@/pages/PublicPage";
 import NotFound from "@/pages/not-found";
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
@@ -66,6 +70,9 @@ function ProtectedRoute({ component: Component, roles, ...rest }: any) {
 function Routes() {
   return (
     <Switch>
+      {/* Public — no auth required */}
+      <Route path="/public" component={PublicPage} />
+
       <Route path="/login" component={LoginPage} />
       <Route path="/">
         <ProtectedRoute component={HomePage} />
@@ -99,6 +106,15 @@ function Routes() {
       </Route>
       <Route path="/procurement">
         <ProtectedRoute component={ProcurementPage} />
+      </Route>
+      <Route path="/documentation">
+        <ProtectedRoute component={DocumentationPage} />
+      </Route>
+      <Route path="/notifications">
+        <ProtectedRoute component={NotificationsPage} />
+      </Route>
+      <Route path="/audit">
+        <ProtectedRoute component={AuditPage} roles={['super_admin', 'ceo', 'ministry_head']} />
       </Route>
       <Route component={NotFound} />
     </Switch>

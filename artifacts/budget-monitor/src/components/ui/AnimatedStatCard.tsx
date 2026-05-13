@@ -1,11 +1,11 @@
 import { cn } from '@/lib/utils';
-import { LucideIcon } from 'lucide-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { GlassCard } from './GlassCard';
 import { AnimatedCounter } from '@/components/hierarchy/AnimatedCounter';
 import { motion } from 'framer-motion';
 
 interface AnimatedStatCardProps {
-  icon: LucideIcon;
+  icon: any;
   label: string;
   /** Raw numeric value fed into the counter animation */
   rawValue: number;
@@ -20,10 +20,10 @@ interface AnimatedStatCardProps {
 }
 
 const colorMap = {
-  primary: { text: 'text-blue-400',    bg: 'bg-blue-400/10',    bar: 'rgba(59,130,246,0.5)',  ring: 'rgba(59,130,246,0.3)'  },
-  success: { text: 'text-emerald-400', bg: 'bg-emerald-400/10', bar: 'rgba(16,185,129,0.5)',  ring: 'rgba(16,185,129,0.3)'  },
-  warning: { text: 'text-amber-400',   bg: 'bg-amber-400/10',   bar: 'rgba(245,158,11,0.5)',  ring: 'rgba(245,158,11,0.3)'  },
-  danger:  { text: 'text-rose-400',    bg: 'bg-rose-400/10',    bar: 'rgba(239,68,68,0.5)',   ring: 'rgba(239,68,68,0.3)'   },
+  primary: { text: 'text-blue-600',    bg: 'bg-blue-50',    bar: 'rgba(59,130,246,0.5)',  ring: 'rgba(59,130,246,0.3)'  },
+  success: { text: 'text-emerald-600', bg: 'bg-emerald-50', bar: 'rgba(16,185,129,0.5)',  ring: 'rgba(16,185,129,0.3)'  },
+  warning: { text: 'text-amber-600',   bg: 'bg-amber-50',   bar: 'rgba(245,158,11,0.5)',  ring: 'rgba(245,158,11,0.3)'  },
+  danger:  { text: 'text-red-600',    bg: 'bg-red-50',    bar: 'rgba(239,68,68,0.5)',   ring: 'rgba(239,68,68,0.3)'   },
 };
 
 export function AnimatedStatCard({
@@ -55,15 +55,15 @@ export function AnimatedStatCard({
       >
         {/* Top row: icon + label */}
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[11px] font-bold text-white/40 uppercase tracking-widest leading-none truncate">
+          <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest leading-none truncate">
             {label}
           </p>
           <motion.div
-            className={cn('p-2.5 rounded-xl shrink-0', c.bg)}
+            className={cn('p-3 rounded-xl shrink-0', c.bg)}
             whileHover={{ scale: 1.12, rotate: 6 }}
             transition={{ type: 'spring', stiffness: 420, damping: 14 }}
           >
-            <Icon size={18} className={c.text} />
+            <FontAwesomeIcon icon={Icon} className={cn("text-2xl", c.text)} />
           </motion.div>
         </div>
 
@@ -82,14 +82,14 @@ export function AnimatedStatCard({
           </h3>
 
           {sub && (
-            <p className="mt-1.5 text-[11px] text-white/30 truncate" title={sub}>
+            <p className="mt-1.5 text-[11px] text-gray-400 truncate" title={sub}>
               {sub}
             </p>
           )}
         </div>
 
         {/* Accent bar */}
-        <div className="h-px w-full overflow-hidden rounded-full bg-white/5">
+        <div className="h-px w-full overflow-hidden rounded-full bg-gray-200">
           <motion.div
             className="h-full rounded-full"
             style={{ background: `linear-gradient(90deg, ${c.bar}, transparent)` }}

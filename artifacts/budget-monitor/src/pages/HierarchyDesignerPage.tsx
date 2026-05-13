@@ -15,10 +15,11 @@ import { UtilizationRing } from '@/components/hierarchy/UtilizationRing';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/api';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  Plus, Trash2, Edit3, ChevronDown, ChevronRight, X, Save,
-  GitBranch, AlertTriangle, Search,
-} from 'lucide-react';
+  faPlus, faTrashAlt, faEdit, faChevronDown, faChevronRight, faTimes, faSave,
+  faProjectDiagram, faExclamationTriangle, faSearch,
+} from '@fortawesome/free-solid-svg-icons';
 import { cn } from '@/lib/utils';
 import { Link } from 'wouter';
 
@@ -90,7 +91,7 @@ function DesignerTreeNode({
             'flex items-center gap-2 p-2.5 rounded-xl border transition-all cursor-pointer group',
             isSelected
               ? 'border-blue-400/60 bg-blue-500/10 ring-1 ring-blue-400/20'
-              : `${colors.border} ${colors.bg} hover:bg-white/5`,
+              : `${colors.border} ${colors.bg} hover:bg-gray-50`,
           )}
           onClick={() => onSelect(node)}
         >
@@ -98,11 +99,11 @@ function DesignerTreeNode({
           <button
             onClick={(e) => { e.stopPropagation(); onToggle(node.id); }}
             className={cn(
-              'w-5 h-5 flex items-center justify-center rounded text-white/30 hover:text-white/70 transition-colors shrink-0',
+              'w-5 h-5 flex items-center justify-center rounded text-gray-400 hover:text-gray-700 transition-colors shrink-0',
               !hasChildren && 'invisible',
             )}
           >
-            {isExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+            {isExpanded ? <FontAwesomeIcon icon={faChevronDown} className={`text-[${13}px] `} /> : <FontAwesomeIcon icon={faChevronRight} className={`text-[${13}px] `} />}
           </button>
 
           {/* Mini ring */}
@@ -111,14 +112,14 @@ function DesignerTreeNode({
           {/* Name & code */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className={cn('text-xs font-semibold truncate', isSelected ? 'text-white' : 'text-white/80')}>
+              <span className={cn('text-xs font-semibold truncate', isSelected ? 'text-gray-900' : 'text-gray-700')}>
                 {node.name}
               </span>
               <Badge variant="outline" className="text-[8px] px-1 py-0 font-bold uppercase tracking-wide shrink-0">
                 {node.code}
               </Badge>
             </div>
-            <p className="text-[9px] text-white/30 mt-0.5">{formatCurrency(node.netAllocated)} allocated</p>
+            <p className="text-[9px] text-gray-400 mt-0.5">{formatCurrency(node.netAllocated)} allocated</p>
           </div>
 
           {/* Pct */}
@@ -136,21 +137,21 @@ function DesignerTreeNode({
               className="p-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/30 transition-colors"
               title="Add child sector"
             >
-              <Plus size={11} />
+              <FontAwesomeIcon icon={faPlus} className={`text-[${11}px] `} />
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); onEdit(node); }}
               className="p-1.5 rounded-lg bg-blue-500/15 text-blue-400 hover:bg-blue-500/30 transition-colors"
               title="Edit sector"
             >
-              <Edit3 size={11} />
+              <FontAwesomeIcon icon={faEdit} className={`text-[${11}px] `} />
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(node); }}
               className="p-1.5 rounded-lg bg-rose-500/15 text-rose-400 hover:bg-rose-500/30 transition-colors"
               title="Delete sector"
             >
-              <Trash2 size={11} />
+              <FontAwesomeIcon icon={faTrashAlt} className={`text-[${11}px] `} />
             </button>
           </div>
         </div>
@@ -167,7 +168,7 @@ function DesignerTreeNode({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="mt-1 space-y-1 border-l border-white/8 ml-[22px] pl-2">
+            <div className="mt-1 space-y-1 border-l border-gray-200 ml-[22px] pl-2">
               {node.children.map((child) => (
                 <DesignerTreeNode
                   key={child.id}
@@ -208,18 +209,18 @@ function FormPanel({ mode, form, selectedNode, sectors, isSaving, onChange, onSa
   if (!mode) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-5 text-center py-20">
-        <div className="w-20 h-20 rounded-3xl bg-white/5 flex items-center justify-center">
-          <GitBranch size={32} className="text-white/20" />
+        <div className="w-20 h-20 rounded-3xl bg-gray-50 flex items-center justify-center">
+          <FontAwesomeIcon icon={faProjectDiagram} className={`text-[${32}px] text-gray-400`} />
         </div>
         <div>
-          <p className="text-white/40 font-semibold">Select a sector to edit</p>
-          <p className="text-white/20 text-sm mt-1">or click "Add Sector" to create a new one</p>
+          <p className="text-gray-500 font-semibold">Select a sector to edit</p>
+          <p className="text-gray-400 text-sm mt-1">or click "Add Sector" to create a new one</p>
         </div>
-        <div className="flex flex-col gap-2 text-xs text-white/20 bg-white/5 rounded-2xl p-4 max-w-xs">
-          <p className="font-bold text-white/30 mb-1">Quick actions on each node:</p>
-          <div className="flex items-center gap-2"><span className="w-5 h-5 rounded bg-emerald-500/20 flex items-center justify-center"><Plus size={10} className="text-emerald-400" /></span> Add child sector</div>
-          <div className="flex items-center gap-2"><span className="w-5 h-5 rounded bg-blue-500/20 flex items-center justify-center"><Edit3 size={10} className="text-blue-400" /></span> Edit this sector</div>
-          <div className="flex items-center gap-2"><span className="w-5 h-5 rounded bg-rose-500/20 flex items-center justify-center"><Trash2 size={10} className="text-rose-400" /></span> Delete sector</div>
+        <div className="flex flex-col gap-2 text-xs text-gray-400 bg-gray-50 rounded-2xl p-4 max-w-xs">
+          <p className="font-bold text-gray-400 mb-1">Quick actions on each node:</p>
+          <div className="flex items-center gap-2"><span className="w-5 h-5 rounded bg-emerald-500/20 flex items-center justify-center"><FontAwesomeIcon icon={faPlus} className={`text-[${10}px] text-emerald-400`} /></span> Add child sector</div>
+          <div className="flex items-center gap-2"><span className="w-5 h-5 rounded bg-blue-500/20 flex items-center justify-center"><FontAwesomeIcon icon={faEdit} className={`text-[${10}px] text-blue-400`} /></span> Edit this sector</div>
+          <div className="flex items-center gap-2"><span className="w-5 h-5 rounded bg-rose-500/20 flex items-center justify-center"><FontAwesomeIcon icon={faTrashAlt} className={`text-[${10}px] text-rose-400`} /></span> Delete sector</div>
         </div>
       </div>
     );
@@ -236,18 +237,18 @@ function FormPanel({ mode, form, selectedNode, sectors, isSaving, onChange, onSa
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-base font-bold text-white">
+          <h3 className="text-base font-bold text-gray-900">
             {mode === 'add' ? 'Add New Sector' : `Edit: ${selectedNode?.name}`}
           </h3>
-          <p className="text-xs text-white/30 mt-0.5">
+          <p className="text-xs text-gray-400 mt-0.5">
             {mode === 'add'
               ? form.parentId ? `Child of ${sectors.find(s => s.id === form.parentId)?.name ?? '...'}` : 'Top-level sector'
               : `Code: ${selectedNode?.code}`
             }
           </p>
         </div>
-        <button onClick={onCancel} className="p-2 rounded-xl text-white/30 hover:text-white hover:bg-white/10 transition-colors">
-          <X size={16} />
+        <button onClick={onCancel} className="p-2 rounded-xl text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors">
+          <FontAwesomeIcon icon={faTimes} className={`text-[${16}px] `} />
         </button>
       </div>
 
@@ -259,7 +260,7 @@ function FormPanel({ mode, form, selectedNode, sectors, isSaving, onChange, onSa
             value={form.name}
             onChange={(e) => onChange('name', e.target.value)}
             placeholder="e.g. Ministry of Agriculture"
-            className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-blue-500/60 focus:bg-white/8 transition-all"
+            className="w-full bg-gray-50 border border-white/15 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-white/20 focus:outline-none focus:border-blue-500/60 focus:bg-gray-50 transition-all"
           />
         </Field>
 
@@ -270,7 +271,7 @@ function FormPanel({ mode, form, selectedNode, sectors, isSaving, onChange, onSa
             onChange={(e) => onChange('code', e.target.value.toUpperCase())}
             placeholder="e.g. AGRI"
             maxLength={10}
-            className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-blue-500/60 focus:bg-white/8 transition-all font-mono uppercase tracking-wider"
+            className="w-full bg-gray-50 border border-white/15 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-white/20 focus:outline-none focus:border-blue-500/60 focus:bg-gray-50 transition-all font-mono uppercase tracking-wider"
           />
         </Field>
 
@@ -278,7 +279,7 @@ function FormPanel({ mode, form, selectedNode, sectors, isSaving, onChange, onSa
           <select
             value={form.parentId ?? ''}
             onChange={(e) => onChange('parentId', e.target.value ? parseInt(e.target.value) : null)}
-            className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/60 focus:bg-white/8 transition-all"
+            className="w-full bg-gray-50 border border-white/15 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-blue-500/60 focus:bg-gray-50 transition-all"
             style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
           >
             <option value="" style={{ background: '#0f172a' }}>— None (top-level) —</option>
@@ -297,7 +298,7 @@ function FormPanel({ mode, form, selectedNode, sectors, isSaving, onChange, onSa
             type="number"
             value={form.sortOrder}
             onChange={(e) => onChange('sortOrder', parseInt(e.target.value) || 0)}
-            className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/60 focus:bg-white/8 transition-all"
+            className="w-full bg-gray-50 border border-white/15 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-blue-500/60 focus:bg-gray-50 transition-all"
           />
         </Field>
       </div>
@@ -305,7 +306,7 @@ function FormPanel({ mode, form, selectedNode, sectors, isSaving, onChange, onSa
       {/* Warning for edit with budget */}
       {mode === 'edit' && selectedNode && selectedNode.netAllocated > 0 && (
         <div className="flex items-start gap-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-          <AlertTriangle size={14} className="text-amber-400 shrink-0 mt-0.5" />
+          <FontAwesomeIcon icon={faExclamationTriangle} className={`text-[${14}px] text-amber-400 shrink-0 mt-0.5`} />
           <p className="text-xs text-amber-300/80">
             This sector has {formatCurrency(selectedNode.netAllocated)} allocated. Changing its parent may affect hierarchy calculations.
           </p>
@@ -320,20 +321,20 @@ function FormPanel({ mode, form, selectedNode, sectors, isSaving, onChange, onSa
           className={cn(
             'flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm transition-all',
             isSaving || !form.name.trim() || !form.code.trim()
-              ? 'bg-white/5 text-white/20 cursor-not-allowed'
+              ? 'bg-gray-50 text-gray-400 cursor-not-allowed'
               : 'bg-blue-500/25 hover:bg-blue-500/35 border border-blue-500/40 text-blue-300 hover:border-blue-400/60',
           )}
         >
           {isSaving ? (
             <LoadingSpinner size={16} className="h-auto" />
           ) : (
-            <Save size={15} />
+            <FontAwesomeIcon icon={faSave} className={`text-[${15}px] `} />
           )}
           {isSaving ? 'Saving…' : mode === 'add' ? 'Create Sector' : 'Save Changes'}
         </button>
         <button
           onClick={onCancel}
-          className="px-5 py-3 rounded-xl border border-white/10 text-white/40 hover:text-white hover:border-white/25 text-sm transition-all"
+          className="px-5 py-3 rounded-xl border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-white/25 text-sm transition-all"
         >
           Cancel
         </button>
@@ -345,12 +346,12 @@ function FormPanel({ mode, form, selectedNode, sectors, isSaving, onChange, onSa
 function Field({ label, children, hint, required }: { label: string; children: React.ReactNode; hint?: string; required?: boolean }) {
   return (
     <div>
-      <label className="flex items-center gap-1.5 text-xs font-bold text-white/50 uppercase tracking-wider mb-2">
+      <label className="flex items-center gap-1.5 text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">
         {label}
         {required && <span className="text-rose-400">*</span>}
       </label>
       {children}
-      {hint && <p className="text-[10px] text-white/25 mt-1.5">{hint}</p>}
+      {hint && <p className="text-[10px] text-gray-400 mt-1.5">{hint}</p>}
     </div>
   );
 }
@@ -392,25 +393,25 @@ function DeleteConfirmDialog({
         >
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-rose-500/15 flex items-center justify-center">
-              <Trash2 size={18} className="text-rose-400" />
+              <FontAwesomeIcon icon={faTrashAlt} className={`text-[${18}px] text-rose-400`} />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">Delete Sector</h3>
-              <p className="text-xs text-white/40">This action cannot be undone</p>
+              <h3 className="text-base font-bold text-gray-900">Delete Sector</h3>
+              <p className="text-xs text-gray-500">This action cannot be undone</p>
             </div>
           </div>
-          <div className="p-3 rounded-xl bg-white/5 border border-white/8 mb-5">
-            <p className="text-sm text-white font-semibold">{node.name}</p>
-            <p className="text-xs text-white/40 mt-0.5">Code: {node.code}</p>
+          <div className="p-3 rounded-xl bg-gray-50 border border-gray-200 mb-5">
+            <p className="text-sm text-gray-900 font-semibold">{node.name}</p>
+            <p className="text-xs text-gray-500 mt-0.5">Code: {node.code}</p>
             {(node.children?.length ?? 0) > 0 && (
               <p className="text-xs text-amber-400 mt-2 flex items-center gap-1.5">
-                <AlertTriangle size={11} />
+                <FontAwesomeIcon icon={faExclamationTriangle} className={`text-[${11}px] `} />
                 Has {node.children.length} child sector{node.children.length > 1 ? 's' : ''} — they will be re-parented or deleted
               </p>
             )}
             {node.netAllocated > 0 && (
               <p className="text-xs text-rose-400 mt-1.5 flex items-center gap-1.5">
-                <AlertTriangle size={11} />
+                <FontAwesomeIcon icon={faExclamationTriangle} className={`text-[${11}px] `} />
                 Has {formatCurrency(node.netAllocated)} active allocations
               </p>
             )}
@@ -421,12 +422,12 @@ function DeleteConfirmDialog({
               disabled={isDeleting}
               className="flex-1 py-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-400 font-semibold text-sm transition-all flex items-center justify-center gap-2"
             >
-              {isDeleting ? <LoadingSpinner size={14} className="h-auto" /> : <Trash2 size={14} />}
+              {isDeleting ? <LoadingSpinner size={14} className="h-auto" /> : <FontAwesomeIcon icon={faTrashAlt} className={`text-[${14}px] `} />}
               {isDeleting ? 'Deleting…' : 'Confirm Delete'}
             </button>
             <button
               onClick={onCancel}
-              className="px-5 py-3 rounded-xl border border-white/10 text-white/50 hover:text-white text-sm transition-all"
+              className="px-5 py-3 rounded-xl border border-gray-200 text-gray-600 hover:text-gray-900 text-sm transition-all"
             >
               Cancel
             </button>
@@ -443,7 +444,8 @@ function DeleteConfirmDialog({
 export default function HierarchyDesignerPage() {
   const { toast } = useToast();
   const { data: tree, isLoading: treeLoading } = useGetSectorTree();
-  const { data: sectors } = useListSectors();
+  const { data: rawSectors } = useListSectors();
+  const sectors = Array.isArray(rawSectors) ? rawSectors : [];
 
   const createMutation = useCreateSector();
   const updateMutation = useUpdateSector();
@@ -574,14 +576,14 @@ export default function HierarchyDesignerPage() {
               <a className="text-xs text-blue-400 hover:underline">← Sectors</a>
             </Link>
           </div>
-          <h2 className="text-3xl font-bold text-white mt-1">Hierarchy Designer</h2>
-          <p className="text-white/40 mt-1">Build and manage the organizational budget structure</p>
+          <h2 className="text-3xl font-bold text-gray-900 mt-1">Hierarchy Designer</h2>
+          <p className="text-gray-500 mt-1">Build and manage the organizational budget structure</p>
         </div>
         <button
           onClick={() => { setSelectedNode(null); setForm(EMPTY_FORM); setFormMode('add'); }}
           className="flex items-center gap-2 px-5 py-3 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-400 font-semibold text-sm transition-all hover:border-blue-400/50"
         >
-          <Plus size={16} />
+          <FontAwesomeIcon icon={faPlus} className={`text-[${16}px] `} />
           Add Top-Level Sector
         </button>
       </div>
@@ -595,7 +597,7 @@ export default function HierarchyDesignerPage() {
           { label: 'With Sub-Sectors', value: flatTree.filter((n) => (n.children?.length ?? 0) > 0).length, color: 'text-purple-400' },
         ].map(({ label, value, color }) => (
           <GlassCard key={label} className="p-4">
-            <p className="text-[10px] uppercase tracking-wider text-white/30 font-bold">{label}</p>
+            <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">{label}</p>
             <p className={cn('text-2xl font-bold mt-1', color)}>{value}</p>
           </GlassCard>
         ))}
@@ -608,17 +610,17 @@ export default function HierarchyDesignerPage() {
           {/* Search */}
           <GlassCard className="p-4">
             <div className="relative">
-              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+              <FontAwesomeIcon icon={faSearch} className={`text-[${15}px] absolute left-3 top-1/2 -translate-y-1/2 text-gray-400`} />
               <input
                 type="text"
                 value={searchQ}
                 onChange={(e) => setSearchQ(e.target.value)}
                 placeholder="Search sectors by name or code…"
-                className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-blue-500/40 transition-all"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-4 py-2.5 text-sm text-gray-900 placeholder-white/20 focus:outline-none focus:border-blue-500/40 transition-all"
               />
               {searchQ && (
-                <button onClick={() => setSearchQ('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white">
-                  <X size={13} />
+                <button onClick={() => setSearchQ('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-900">
+                  <FontAwesomeIcon icon={faTimes} className={`text-[${13}px] `} />
                 </button>
               )}
             </div>
@@ -628,17 +630,17 @@ export default function HierarchyDesignerPage() {
             className="flex-1 overflow-hidden"
             header={
               <div className="flex items-center justify-between">
-                <h3 className="font-bold text-white">Current Hierarchy</h3>
+                <h3 className="font-bold text-gray-900">Current Hierarchy</h3>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setExpandedIds(new Set(flatTree.map((n) => n.id)))}
-                    className="text-[10px] text-white/30 hover:text-white/60 transition-colors px-2 py-1 rounded-lg hover:bg-white/5"
+                    className="text-[10px] text-gray-400 hover:text-gray-600 transition-colors px-2 py-1 rounded-lg hover:bg-gray-50"
                   >
                     Expand all
                   </button>
                   <button
                     onClick={() => setExpandedIds(new Set())}
-                    className="text-[10px] text-white/30 hover:text-white/60 transition-colors px-2 py-1 rounded-lg hover:bg-white/5"
+                    className="text-[10px] text-gray-400 hover:text-gray-600 transition-colors px-2 py-1 rounded-lg hover:bg-gray-50"
                   >
                     Collapse all
                   </button>
@@ -649,8 +651,8 @@ export default function HierarchyDesignerPage() {
             {treeLoading ? (
               <LoadingSpinner size={36} className="py-20" />
             ) : filteredTree.length === 0 ? (
-              <div className="py-16 flex flex-col items-center text-white/20 gap-3">
-                <GitBranch size={36} className="opacity-30" />
+              <div className="py-16 flex flex-col items-center text-gray-400 gap-3">
+                <FontAwesomeIcon icon={faProjectDiagram} className={`text-[${36}px] opacity-30`} />
                 <p className="text-sm">{searchQ ? 'No sectors match your search' : 'No sectors defined yet'}</p>
                 <button
                   onClick={() => { setForm(EMPTY_FORM); setFormMode('add'); }}
@@ -682,7 +684,7 @@ export default function HierarchyDesignerPage() {
 
         {/* Right: Form / Detail panel */}
         <div className="lg:col-span-2">
-          <GlassCard className="h-full" header={<h3 className="font-bold text-white">{formMode === 'add' ? 'New Sector' : formMode === 'edit' ? 'Edit Sector' : selectedNode ? 'Sector Info' : 'Actions'}</h3>}>
+          <GlassCard className="h-full" header={<h3 className="font-bold text-gray-900">{formMode === 'add' ? 'New Sector' : formMode === 'edit' ? 'Edit Sector' : selectedNode ? 'Sector Info' : 'Actions'}</h3>}>
             {formMode ? (
               <FormPanel
                 mode={formMode}
@@ -755,10 +757,10 @@ function SectorInfoPanel({
       <div className="flex items-center gap-4">
         <UtilizationRing value={node.utilizationPct} size={68} strokeWidth={5} />
         <div>
-          <h3 className="text-base font-bold text-white">{node.name}</h3>
+          <h3 className="text-base font-bold text-gray-900">{node.name}</h3>
           <Badge variant="outline" className="text-xs font-bold uppercase tracking-wider mt-1">{node.code}</Badge>
           {node.responsibleUser && (
-            <p className="text-xs text-white/30 mt-1">Head: {node.responsibleUser.name}</p>
+            <p className="text-xs text-gray-400 mt-1">Head: {node.responsibleUser.name}</p>
           )}
         </div>
       </div>
@@ -769,10 +771,10 @@ function SectorInfoPanel({
           { label: 'Net Allocated', val: node.netAllocated, color: 'text-blue-400' },
           { label: 'Available', val: node.availableBalance, color: 'text-emerald-400' },
           { label: 'Utilization', val: `${Math.round(node.utilizationPct)}%`, color: node.utilizationPct >= 90 ? 'text-rose-400' : 'text-amber-400' },
-          { label: 'Sub-Sectors', val: node.children?.length ?? 0, color: 'text-white/70' },
+          { label: 'Sub-Sectors', val: node.children?.length ?? 0, color: 'text-gray-700' },
         ].map(({ label, val, color }) => (
           <div key={label} className="glass p-3 rounded-xl">
-            <p className="text-[9px] uppercase tracking-wider text-white/30 font-bold">{label}</p>
+            <p className="text-[9px] uppercase tracking-wider text-gray-400 font-bold">{label}</p>
             <p className={cn('text-sm font-bold mt-1', color)}>{typeof val === 'number' && label !== 'Sub-Sectors' && label !== 'Utilization' ? formatCurrency(val as number) : val}</p>
           </div>
         ))}
@@ -781,18 +783,18 @@ function SectorInfoPanel({
       {/* Actions */}
       <div className="space-y-2 pt-2">
         <button onClick={onAddChild} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 font-semibold text-sm transition-all">
-          <Plus size={15} /> Add Child Sector
+          <FontAwesomeIcon icon={faPlus} className={`text-[${15}px] `} /> Add Child Sector
         </button>
         <button onClick={onEdit} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 font-semibold text-sm transition-all">
-          <Edit3 size={15} /> Edit This Sector
+          <FontAwesomeIcon icon={faEdit} className={`text-[${15}px] `} /> Edit This Sector
         </button>
         <Link href={`/sectors/${node.id}`}>
-          <a className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white font-semibold text-sm transition-all">
-            <GitBranch size={15} /> View Budget Details
+          <a className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-600 hover:text-gray-900 font-semibold text-sm transition-all">
+            <FontAwesomeIcon icon={faProjectDiagram} className={`text-[${15}px] `} /> View Budget Details
           </a>
         </Link>
         <button onClick={onDelete} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-rose-500/8 hover:bg-rose-500/15 border border-rose-500/15 text-rose-400/80 hover:text-rose-400 font-semibold text-sm transition-all">
-          <Trash2 size={15} /> Delete Sector
+          <FontAwesomeIcon icon={faTrashAlt} className={`text-[${15}px] `} /> Delete Sector
         </button>
       </div>
     </motion.div>
