@@ -13,7 +13,7 @@ import { NodeDetailPanel } from '@/components/hierarchy/NodeDetailPanel';
 import { BudgetHierarchyTree } from '@/components/hierarchy/BudgetHierarchyTree';
 import { formatCurrency, formatCompact } from '@/lib/api';
 import {
-  faWallet, faChartLine, faChevronLeft, faArrowRight as faArrowDownRight,
+  faWallet, faChartLine, faChevronLeft,
   faNetworkWired, faShoppingCart, faClipboardList, faChartBar, faArrowRight
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -338,7 +338,7 @@ export default function SectorDetailPage({ id }: { id: string }) {
                 >
                   <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${isIn ? 'bg-emerald-500/10' : 'bg-blue-500/10'}`}>
                     {isIn
-                      ? <FontAwesomeIcon icon={faArrowDownRight} className={`text-[${15}px] text-emerald-400`} />
+                      ? <FontAwesomeIcon icon={faArrowRight} className={`text-[${15}px] text-emerald-400 rotate-45`} />
                       : <FontAwesomeIcon icon={faArrowRight} className={`text-[${15}px] text-blue-400`} />
                     }
                   </div>
