@@ -1,0 +1,27 @@
+2026-05-10T10:37:29.635440973Z ==> Downloading cache...
+2026-05-10T10:37:29.6710395Z ==> Cloning from https://github.com/pgwiz/Budget-Visualizer-replit
+2026-05-10T10:37:35.506302216Z ==> Checking out commit 6a5650cb497145ca957d50794d40aa359d32ba17 in branch deployment/vercel-render
+2026-05-10T10:37:42.501371301Z ==> Downloaded 169MB in 9s. Extraction took 4s.
+2026-05-10T10:37:48.773157934Z ==> Using Node.js version 24.14.1 (default)
+2026-05-10T10:37:48.79722138Z ==> Docs on specifying a Node.js version: https://render.com/docs/node-version
+2026-05-10T10:37:48.903072349Z ==> Running build command 'pnpm install --frozen-lockfile && pnpm -r --filter "./artifacts/api-server" --filter "./artifacts/budget-monitor" run build'...
+2026-05-10T10:38:03.720647104Z ==> Uploading build...
+2026-05-10T10:38:13.12445596Z ==> Uploaded in 4.3s. Compression took 5.1s
+2026-05-10T10:38:13.162646696Z ==> Build successful 🎉
+2026-05-10T10:38:15.452657689Z ==> Deploying...
+2026-05-10T10:38:15.517801538Z ==> Setting WEB_CONCURRENCY=1 by default, based on available CPUs in the instance
+2026-05-10T10:38:43.187156164Z ==> Running ' node --enable-source-maps ./artifacts/api-server/dist/index.mjs'
+2026-05-10T10:38:46.088925273Z /opt/render/project/src/lib/db/src/index.ts:18
+2026-05-10T10:38:46.088946863Z   throw new Error(
+2026-05-10T10:38:46.088949443Z         ^
+2026-05-10T10:38:46.088951374Z 
+2026-05-10T10:38:46.088953634Z Error: Invalid DB_TYPE value: "neon". Expected "prisma" or "supabase".
+2026-05-10T10:38:46.088955824Z     at resolveDatabaseType (/opt/render/project/src/lib/db/src/index.ts:18:9)
+2026-05-10T10:38:46.088957834Z     at <anonymous> (/opt/render/project/src/lib/db/src/index.ts:24:16)
+2026-05-10T10:38:46.088959694Z     at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+2026-05-10T10:38:46.088962104Z     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:661:26)
+2026-05-10T10:38:46.088963994Z     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+2026-05-10T10:38:46.088965834Z 
+2026-05-10T10:38:46.088967754Z Node.js v24.14.1
+2026-05-10T10:38:47.167360152Z ==> Exited with status 1
+2026-05-10T10:38:47.170498477Z ==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys

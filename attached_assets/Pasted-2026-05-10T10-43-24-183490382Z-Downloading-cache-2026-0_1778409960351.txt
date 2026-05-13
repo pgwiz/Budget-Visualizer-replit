@@ -1,0 +1,40 @@
+2026-05-10T10:43:24.183490382Z ==> Downloading cache...
+2026-05-10T10:43:24.21838095Z ==> Cloning from https://github.com/pgwiz/Budget-Visualizer-replit
+2026-05-10T10:43:25.042251967Z ==> Checking out commit 6a5650cb497145ca957d50794d40aa359d32ba17 in branch deployment/vercel-render
+2026-05-10T10:43:31.825603249Z ==> Downloaded 169MB in 3s. Extraction took 4s.
+2026-05-10T10:43:40.317082596Z ==> Using Node.js version 24.14.1 (default)
+2026-05-10T10:43:40.340416563Z ==> Docs on specifying a Node.js version: https://render.com/docs/node-version
+2026-05-10T10:43:40.446518358Z ==> Running build command 'pnpm install --frozen-lockfile && pnpm -r --filter "./artifacts/api-server" --filter "./artifacts/budget-monitor" run build'...
+2026-05-10T10:43:55.33995762Z ==> Uploading build...
+2026-05-10T10:44:05.336679927Z ==> Uploaded in 4.7s. Compression took 5.3s
+2026-05-10T10:44:05.376062833Z ==> Build successful 🎉
+2026-05-10T10:44:08.0580095Z ==> Deploying...
+2026-05-10T10:44:08.122477114Z ==> Setting WEB_CONCURRENCY=1 by default, based on available CPUs in the instance
+2026-05-10T10:44:44.919574819Z ==> Running ' node --enable-source-maps ./artifacts/api-server/dist/index.mjs'
+2026-05-10T10:44:47.824604618Z /opt/render/project/src/lib/db/src/index.ts:18
+2026-05-10T10:44:47.824629288Z   throw new Error(
+2026-05-10T10:44:47.824633308Z         ^
+2026-05-10T10:44:47.824636318Z 
+2026-05-10T10:44:47.824640339Z Error: Invalid DB_TYPE value: "postgres". Expected "prisma" or "supabase".
+2026-05-10T10:44:47.824645608Z     at resolveDatabaseType (/opt/render/project/src/lib/db/src/index.ts:18:9)
+2026-05-10T10:44:47.824650259Z     at <anonymous> (/opt/render/project/src/lib/db/src/index.ts:24:16)
+2026-05-10T10:44:47.824655199Z     at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+2026-05-10T10:44:47.824660349Z     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:661:26)
+2026-05-10T10:44:47.824665109Z     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+2026-05-10T10:44:47.824669339Z 
+2026-05-10T10:44:47.824674249Z Node.js v24.14.1
+2026-05-10T10:44:49.707531954Z ==> Exited with status 1
+2026-05-10T10:44:49.712513524Z ==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
+2026-05-10T10:44:55.666285679Z ==> Running ' node --enable-source-maps ./artifacts/api-server/dist/index.mjs'
+2026-05-10T10:44:58.56246052Z /opt/render/project/src/lib/db/src/index.ts:18
+2026-05-10T10:44:58.562483821Z   throw new Error(
+2026-05-10T10:44:58.562487321Z         ^
+2026-05-10T10:44:58.562489601Z 
+2026-05-10T10:44:58.562492481Z Error: Invalid DB_TYPE value: "postgres". Expected "prisma" or "supabase".
+2026-05-10T10:44:58.562495561Z     at resolveDatabaseType (/opt/render/project/src/lib/db/src/index.ts:18:9)
+2026-05-10T10:44:58.562498071Z     at <anonymous> (/opt/render/project/src/lib/db/src/index.ts:24:16)
+2026-05-10T10:44:58.562500651Z     at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+2026-05-10T10:44:58.562503791Z     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:661:26)
+2026-05-10T10:44:58.562506211Z     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+2026-05-10T10:44:58.562508442Z 
+2026-05-10T10:44:58.562510822Z Node.js v24.14.1

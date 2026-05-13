@@ -1,8 +1,7 @@
 import { Router } from "express";
 import { db, usersTable, sectorsTable } from "@workspace/db";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { hashPassword, verifyPassword, requireAuth } from "../lib/auth";
-import { createNotification } from "../utils/createNotification.js";
 
 const router = Router();
 
@@ -28,44 +27,50 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     const sectors = await db.select().from(sectorsTable).where(eq(sectorsTable.id, user.sectorId)).limit(1);
     sector = sectors[0] || null;
   }
-  // Fire login notification
-  createNotification({
-    actorId: user.id, actionType: "USER_LOGIN",
-    entityType: "login", entityId: null,
-    metadata: { ip: req.ip },
-  });
   const { passwordHash: _, ...safeUser } = user;
   res.json({ user: { ...safeUser, sector } });
 });
 
+// ── In-process cache for demo-users (rarely changes, fetched on every login page load) ──
+let demoUsersCache: { data: unknown; ts: number } | null = null;
+const DEMO_USERS_TTL = 5 * 60 * 1000; // 5 minutes
+
 // Public endpoint for the prototype login page — returns users grouped by sector hierarchy
 router.get("/auth/demo-users", async (_req, res): Promise<void> => {
-  const roles = ["super_admin", "ceo", "ministry_head", "department_head", "viewer"] as const;
-  const result = [];
+  // Serve from cache if fresh
+  if (demoUsersCache && Date.now() - demoUsersCache.ts < DEMO_USERS_TTL) {
+    res.set("X-Cache", "HIT");
+    res.set("Cache-Control", "public, max-age=300");
+    res.json(demoUsersCache.data);
+    return;
+  }
 
-  for (const role of roles) {
-    const [user] = await db
+  // Fetch users and sectors in parallel (was sequential before)
+  const [users, sectors] = await Promise.all([
+    db
       .select({
         id: usersTable.id,
         name: usersTable.name,
         email: usersTable.email,
         role: usersTable.role,
         sectorId: usersTable.sectorId,
-        sectorName: sectorsTable.name,
-        sectorCode: sectorsTable.code,
       })
       .from(usersTable)
-      .leftJoin(sectorsTable, eq(usersTable.sectorId, sectorsTable.id))
-      .where(and(eq(usersTable.role, role), eq(usersTable.isActive, true)))
-      .orderBy(usersTable.id)
-      .limit(1);
+      .where(eq(usersTable.isActive, true))
+      .orderBy(usersTable.name),
+    db
+      .select({ id: sectorsTable.id, name: sectorsTable.name, code: sectorsTable.code, parentId: sectorsTable.parentId, depth: sectorsTable.depth })
+      .from(sectorsTable)
+      .orderBy(sectorsTable.depth, sectorsTable.name),
+  ]);
 
-    if (user) result.push({ ...user, password: "password" });
-  }
+  const payload = { users, sectors };
+  demoUsersCache = { data: payload, ts: Date.now() };
 
-  res.json(result);
+  res.set("X-Cache", "MISS");
+  res.set("Cache-Control", "public, max-age=300");
+  res.json(payload);
 });
-
 
 router.post("/auth/logout", (req, res): void => {
   (req as any).session.destroy(() => {

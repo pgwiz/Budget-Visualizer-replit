@@ -1,11 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { pool } from "@workspace/db";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const rawPort = process.env["PORT"];
 
@@ -21,31 +16,20 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-async function runMigrations() {
-  const migrationDir = path.resolve(__dirname, "../../migrations");
-  if (!fs.existsSync(migrationDir)) return;
-  const files = fs.readdirSync(migrationDir).filter(f => f.endsWith(".sql")).sort();
-  const client = await pool.connect();
-  try {
-    for (const file of files) {
-      const sql = fs.readFileSync(path.join(migrationDir, file), "utf8");
-      await client.query(sql);
-      logger.info({ file }, "Migration applied");
-    }
-  } catch (err) {
-    logger.error({ err }, "Migration failed");
-  } finally {
-    client.release();
+app.listen(port, (err) => {
+  if (err) {
+    logger.error({ err }, "Error listening on port");
+    process.exit(1);
   }
-}
 
-runMigrations().then(() => {
-  app.listen(port, (err) => {
-    if (err) {
-      logger.error({ err }, "Error listening on port");
-      process.exit(1);
-    }
-    logger.info({ port }, "Server listening");
+  logger.info({ port }, "Server listening");
+
+  // Warm the connection pool immediately after startup so the first real
+  // request doesn't pay the SSL handshake cost. Fire-and-forget — a failure
+  // here is non-fatal (the pool will reconnect on the first request).
+  pool.query("SELECT 1").then(() => {
+    logger.info("DB pool warmed");
+  }).catch((err: unknown) => {
+    logger.warn({ err }, "DB pool warm-up failed — will retry on first request");
   });
 });
-
