@@ -114,7 +114,7 @@ export default function SectorDetailPage({ id }: { id: string }) {
         <div className="flex items-start gap-4">
           <Link href="/sectors">
             <a className="p-2 rounded-xl glass border-gray-200 text-gray-500 hover:text-gray-900 hover:border-white/30 transition-all mt-1">
-              <FontAwesomeIcon icon={faChevronLeft} className={`text-[${20}px] `} />
+              <FontAwesomeIcon icon={faChevronLeft} className="text-[20px]" />
             </a>
           </Link>
           <div>
@@ -309,7 +309,7 @@ export default function SectorDetailPage({ id }: { id: string }) {
                 <GitBranch size={13} /> Hierarchy Map
               </TabsTrigger>
               <TabsTrigger value="tree" className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400 gap-2 text-xs">
-                <FontAwesomeIcon icon={faNetworkWired} className={`text-[${13}px] `} /> Tree View
+                <FontAwesomeIcon icon={faNetworkWired} className="text-[13px]" /> Tree View
               </TabsTrigger>
             </TabsList>
             <TabsContent value="hierarchy">
@@ -338,8 +338,8 @@ export default function SectorDetailPage({ id }: { id: string }) {
                 >
                   <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${isIn ? 'bg-emerald-500/10' : 'bg-blue-500/10'}`}>
                     {isIn
-                      ? <FontAwesomeIcon icon={faArrowRight} className={`text-[${15}px] text-emerald-400 rotate-45`} />
-                      : <FontAwesomeIcon icon={faArrowRight} className={`text-[${15}px] text-blue-400`} />
+                      ? <FontAwesomeIcon icon={faArrowRight} className="text-[15px] text-emerald-400 rotate-45" />
+                      : <FontAwesomeIcon icon={faArrowRight} className="text-[15px] text-blue-400" />
                     }
                   </div>
                   <div className="flex-1 min-w-0">
