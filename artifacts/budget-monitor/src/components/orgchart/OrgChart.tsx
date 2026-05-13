@@ -7,7 +7,8 @@ import { OrgChartPopup } from './OrgChartPopup';
 import { formatCurrency, formatCompact } from '@/lib/api';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { RotateCcw, GripVertical, Maximize2, Minimize2, ChevronDown, ChevronRight } from 'lucide-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faChevronRight, faChevronDown, faProjectDiagram, faUndo, faGripVertical, faExpand, faCompress, faTimes, faExternalLinkAlt, faChartLine, faWallet, faSearchPlus, faChevronUp, faChevronLeft, faLayerGroup, faList, faCog, faPercentage, faHome, faDownload, faCheck, faSpinner } from '@fortawesome/free-solid-svg-icons';
 
 /* ─────────────────────────────────────────────────────────── */
 /*  Layout constants & types                                   */
@@ -51,7 +52,8 @@ function layoutTree(n: SectorTreeNode, xStart: number, depth: number): LayoutNod
 
 function computeAll(roots: SectorTreeNode[]): { nodes: LayoutNode[]; w: number; h: number } {
   let xStart = 0;
-  const nodes: LayoutNode[] = roots.map((r) => {
+  const safeRoots = Array.isArray(roots) ? roots : [];
+  const nodes: LayoutNode[] = safeRoots.map((r) => {
     const ln = layoutTree(r, xStart, 0);
     xStart += countLeaves(r) * (NODE_W + GAP_H);
     return ln;
@@ -61,7 +63,7 @@ function computeAll(roots: SectorTreeNode[]): { nodes: LayoutNode[]; w: number; 
     if (!n.children || n.children.length === 0) return d;
     return Math.max(...n.children.map((c: SectorTreeNode) => maxDepth(c, d + 1)));
   }
-  const maxD = roots.length > 0 ? Math.max(...roots.map((r) => maxDepth(r, 0))) : 0;
+  const maxD = safeRoots.length > 0 ? Math.max(...safeRoots.map((r) => maxDepth(r, 0))) : 0;
   const h    = (maxD + 1) * (NODE_H + GAP_V) + 20;
   return { nodes, w, h };
 }
@@ -187,8 +189,8 @@ function OrgNode({ ln, effectiveX, effectiveY, selected, expanded, onClick, onTo
       }}
     >
       {/* Drag handle */}
-      <div className="absolute top-2 left-2 text-white/15">
-        <GripVertical size={10} />
+      <div className="absolute top-2 left-2 text-gray-300">
+        <FontAwesomeIcon icon={faGripVertical} className={`text-[${10}px] `} />
       </div>
 
       {/* Depth badge */}
@@ -202,7 +204,7 @@ function OrgNode({ ln, effectiveX, effectiveY, selected, expanded, onClick, onTo
       <div className="flex items-start gap-2.5">
         <UtilizationRing value={pct} size={RING_SIZE} strokeWidth={3.5} className="shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
-          <p className="text-[10px] font-bold text-white leading-tight line-clamp-2 mb-0.5">{node.name}</p>
+          <p className="text-[10px] font-bold text-gray-900 leading-tight line-clamp-2 mb-0.5">{node.name}</p>
           <Badge variant="outline" className="text-[7px] font-bold uppercase tracking-widest px-1 py-0">
             {node.code}
           </Badge>
@@ -211,14 +213,14 @@ function OrgNode({ ln, effectiveX, effectiveY, selected, expanded, onClick, onTo
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-1">
-        <div className="bg-white/5 rounded-lg p-1.5">
-          <p className="text-[7px] uppercase tracking-wider text-white/30 font-bold">Received</p>
+        <div className="bg-gray-50 rounded-lg p-1.5">
+          <p className="text-[7px] uppercase tracking-wider text-gray-400 font-bold">Received</p>
           <p className="text-[9px] font-bold text-blue-400 mt-0.5 truncate" title={formatCurrency(node.netAllocated)}>
             {formatCompact(node.netAllocated)}
           </p>
         </div>
-        <div className="bg-white/5 rounded-lg p-1.5">
-          <p className="text-[7px] uppercase tracking-wider text-white/30 font-bold">Available</p>
+        <div className="bg-gray-50 rounded-lg p-1.5">
+          <p className="text-[7px] uppercase tracking-wider text-gray-400 font-bold">Available</p>
           <p className={`text-[9px] font-bold mt-0.5 truncate ${node.availableBalance < 0 ? 'text-rose-400' : 'text-emerald-400'}`}
              title={formatCurrency(node.availableBalance)}>
             {formatCompact(node.availableBalance)}
@@ -229,12 +231,12 @@ function OrgNode({ ln, effectiveX, effectiveY, selected, expanded, onClick, onTo
       {/* Progress bar */}
       <div className="space-y-0.5">
         <div className="flex justify-between items-center">
-          <span className="text-[7px] text-white/30">Utilization</span>
+          <span className="text-[7px] text-gray-400">Utilization</span>
           <span className={cn('text-[8px] font-bold', pct >= 90 ? 'text-rose-400' : pct >= 70 ? 'text-amber-400' : 'text-blue-400')}>
             {Math.round(pct)}%
           </span>
         </div>
-        <div className="h-1 w-full bg-white/8 rounded-full overflow-hidden">
+        <div className="h-1 w-full bg-gray-50 rounded-full overflow-hidden">
           <motion.div
             className="h-full rounded-full"
             initial={{ width: 0 }}
@@ -248,13 +250,13 @@ function OrgNode({ ln, effectiveX, effectiveY, selected, expanded, onClick, onTo
       {/* Expand/collapse button for children */}
       {hasChildren && (
         <button
-          className="absolute bottom-1.5 right-2 flex items-center gap-1 text-[8px] text-white/30 hover:text-white/60 transition-colors"
+          className="absolute bottom-1.5 right-2 flex items-center gap-1 text-[8px] text-gray-400 hover:text-gray-600 transition-colors"
           onClick={(e) => {
             e.stopPropagation();
             onToggleExpand(node);
           }}
         >
-          {expanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+          {expanded ? <FontAwesomeIcon icon={faChevronDown} className={`text-[${10}px] `} /> : <FontAwesomeIcon icon={faChevronRight} className={`text-[${10}px] `} />}
           <span>{node.children?.length ?? 0} sub</span>
         </button>
       )}
@@ -308,7 +310,7 @@ function RootBanner({
         <div className="text-2xl">🏛️</div>
         <div className="flex-1 min-w-0">
           <p className="text-[8px] uppercase tracking-widest text-blue-400/60 font-bold">Active Cycle</p>
-          <p className="text-sm font-bold text-white mt-0.5 truncate">{cycleName || 'Government Budget'}</p>
+          <p className="text-sm font-bold text-gray-900 mt-0.5 truncate">{cycleName || 'Government Budget'}</p>
           <p className="text-[9px] text-blue-300/70 mt-0.5">Total: {formatCompact(totalBudget)}</p>
         </div>
         <UtilizationRing value={pct} size={52} strokeWidth={4} />
@@ -354,18 +356,18 @@ function ExpandedChildren({
       >
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-lg font-bold text-white">{node.name}</h3>
-            <p className="text-xs text-white/40 mt-0.5">
+            <h3 className="text-lg font-bold text-gray-900">{node.name}</h3>
+            <p className="text-xs text-gray-500 mt-0.5">
               {children.length} sub-sector{children.length !== 1 ? 's' : ''} · Budget: {formatCompact(node.netAllocated)}
             </p>
           </div>
-          <button onClick={onClose} className="text-white/40 hover:text-white transition-colors text-sm px-3 py-1 rounded-lg border border-white/10 hover:border-white/20">
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-900 transition-colors text-sm px-3 py-1 rounded-lg border border-gray-200 hover:border-white/20">
             Close
           </button>
         </div>
 
         {children.length === 0 ? (
-          <p className="text-white/30 text-sm py-8 text-center">No sub-sectors</p>
+          <p className="text-gray-400 text-sm py-8 text-center">No sub-sectors</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {children.map((child: SectorTreeNode) => {
@@ -374,22 +376,22 @@ function ExpandedChildren({
                 <button
                   key={child.id}
                   onClick={() => onNavigate(child.id)}
-                  className="text-left p-4 rounded-xl border border-white/8 hover:border-white/20 bg-white/3 hover:bg-white/6 transition-all group"
+                  className="text-left p-4 rounded-xl border border-gray-200 hover:border-white/20 bg-gray-50 hover:bg-white/6 transition-all group"
                 >
                   <div className="flex items-start gap-3">
                     <UtilizationRing value={pct} size={40} strokeWidth={3} className="shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-bold text-white/80 group-hover:text-white leading-tight line-clamp-2">{child.name}</p>
-                      <p className="text-[9px] text-white/30 font-mono mt-0.5">{child.code}</p>
+                      <p className="text-[11px] font-bold text-gray-700 group-hover:text-gray-900 leading-tight line-clamp-2">{child.name}</p>
+                      <p className="text-[9px] text-gray-400 font-mono mt-0.5">{child.code}</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2 mt-3">
-                    <div className="bg-white/5 rounded-lg px-2 py-1.5">
-                      <p className="text-[7px] uppercase text-white/30 font-bold">Allocated</p>
+                    <div className="bg-gray-50 rounded-lg px-2 py-1.5">
+                      <p className="text-[7px] uppercase text-gray-400 font-bold">Allocated</p>
                       <p className="text-[10px] font-bold text-blue-400">{formatCompact(child.netAllocated)}</p>
                     </div>
-                    <div className="bg-white/5 rounded-lg px-2 py-1.5">
-                      <p className="text-[7px] uppercase text-white/30 font-bold">Available</p>
+                    <div className="bg-gray-50 rounded-lg px-2 py-1.5">
+                      <p className="text-[7px] uppercase text-gray-400 font-bold">Available</p>
                       <p className={`text-[10px] font-bold ${child.availableBalance < 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
                         {formatCompact(child.availableBalance)}
                       </p>
@@ -397,17 +399,17 @@ function ExpandedChildren({
                   </div>
                   <div className="mt-2">
                     <div className="flex justify-between text-[7px]">
-                      <span className="text-white/30">Utilization</span>
+                      <span className="text-gray-400">Utilization</span>
                       <span className={cn('font-bold', pct >= 90 ? 'text-rose-400' : pct >= 70 ? 'text-amber-400' : 'text-blue-400')}>
                         {Math.round(pct)}%
                       </span>
                     </div>
-                    <div className="h-1 w-full bg-white/8 rounded-full mt-0.5 overflow-hidden">
+                    <div className="h-1 w-full bg-gray-50 rounded-full mt-0.5 overflow-hidden">
                       <div className="h-full rounded-full" style={{ width: `${Math.min(100, pct)}%`, background: pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : '#3b82f6' }} />
                     </div>
                   </div>
                   {(child.children?.length ?? 0) > 0 && (
-                    <p className="text-[8px] text-white/20 mt-2">↓ {child.children?.length ?? 0} sub-sectors</p>
+                    <p className="text-[8px] text-gray-400 mt-2">↓ {child.children?.length ?? 0} sub-sectors</p>
                   )}
                 </button>
               );
@@ -438,9 +440,10 @@ export function OrgChart({ nodes, totalBudget = 0, cycleName }: OrgChartProps) {
 
   const [positions, setPositions] = useState<Positions>({});
 
-  const { nodes: layoutNodes, w, h } = computeAll(nodes);
+  const safeNodes = Array.isArray(nodes) ? nodes : [];
+  const { nodes: layoutNodes, w, h } = computeAll(safeNodes);
   const flat           = flattenLayout(layoutNodes);
-  const totalAllocated = nodes.reduce((s, n) => s + n.netAllocated, 0);
+  const totalAllocated = safeNodes.reduce((s, n) => s + n.netAllocated, 0);
   const canvasW        = Math.max(w, 800);
   const BANNER_EXTRA   = 100;
 
@@ -541,13 +544,13 @@ export function OrgChart({ nodes, totalBudget = 0, cycleName }: OrgChartProps) {
       {/* Legend + controls */}
       <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
         <div className="flex items-center gap-3 flex-wrap">
-          <p className="text-xs text-white/30 italic">Drag nodes to rearrange · Click to inspect · Click sub-sectors to expand</p>
+          <p className="text-xs text-gray-400 italic">Drag nodes to rearrange · Click to inspect · Click sub-sectors to expand</p>
           {hasMoved && (
             <button
               onClick={resetLayout}
               className="flex items-center gap-1.5 text-xs text-blue-400/70 hover:text-blue-400 transition-colors px-2.5 py-1 rounded-lg border border-blue-500/20 hover:border-blue-500/40 bg-blue-500/5"
             >
-              <RotateCcw size={11} />
+              <FontAwesomeIcon icon={faUndo} className={`text-[${11}px] `} />
               Reset
             </button>
           )}
@@ -562,15 +565,15 @@ export function OrgChart({ nodes, totalBudget = 0, cycleName }: OrgChartProps) {
           ].map(({ label, color }) => (
             <div key={label} className="flex items-center gap-1">
               <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
-              <span className="text-[9px] text-white/35">{label}</span>
+              <span className="text-[9px] text-gray-900/35">{label}</span>
             </div>
           ))}
           {/* Fullscreen toggle */}
           <button
             onClick={toggleFullscreen}
-            className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition-colors px-2 py-1 rounded-lg border border-white/10 hover:border-white/20"
+            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors px-2 py-1 rounded-lg border border-gray-200 hover:border-white/20"
           >
-            {isFullscreen ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+            {isFullscreen ? <FontAwesomeIcon icon={faCompress} className={`text-[${12}px] `} /> : <FontAwesomeIcon icon={faExpand} className={`text-[${12}px] `} />}
             {isFullscreen ? 'Exit' : 'Fullscreen'}
           </button>
         </div>
@@ -626,7 +629,7 @@ export function OrgChart({ nodes, totalBudget = 0, cycleName }: OrgChartProps) {
           })}
 
           {nodes.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-64 text-white/20 gap-3">
+            <div className="flex flex-col items-center justify-center h-64 text-gray-400 gap-3">
               <div className="text-5xl opacity-30">🌿</div>
               <p className="text-sm">No sectors to display</p>
             </div>

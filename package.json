@@ -9,6 +9,7 @@
   },
   "private": true,
   "devDependencies": {
+    "embedded-postgres": "18.3.0-beta.17",
     "prettier": "^3.8.1",
     "typescript": "~5.9.2"
   },

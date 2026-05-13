@@ -3,6 +3,7 @@ import { db, allocationsTable, revocationsTable, sectorsTable, usersTable, budge
 import { eq, and, inArray } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { getAvailableBalance, getSubtreeIds, getImmediateChildIds, getUserScopeId } from "../lib/budget-calc";
+import { createNotification } from "../utils/createNotification.js";
 
 const router = Router();
 
@@ -142,6 +143,12 @@ router.post("/allocations", requireAuth, async (req, res): Promise<void> => {
     meta: { amount, toSectorId, fromSectorId: effectiveFrom, cycleId: budgetCycleId },
     ipAddress: req.ip,
   });
+  // Fire-and-forget notification
+  createNotification({
+    actorId: user.id, actionType: "ALLOCATION_CREATED",
+    entityType: "allocation", entityId: created.id,
+    metadata: { amount, toSectorId, fromSectorId: effectiveFrom },
+  });
   res.status(201).json(await enrichAllocation(created));
 });
 
@@ -167,6 +174,12 @@ router.post("/allocations/:allocationId/revoke", requireAuth, async (req, res): 
   await db.insert(auditLogsTable).values({
     userId: user.id, action: "revoked", subjectType: "allocation", subjectId: allocs[0].id,
     meta: { reason, amount: allocs[0].amount }, ipAddress: req.ip,
+  });
+  // Fire-and-forget notification
+  createNotification({
+    actorId: user.id, actionType: "ALLOCATION_REVOKED",
+    entityType: "allocation", entityId: allocs[0].id,
+    metadata: { reason, amount: allocs[0].amount, toSectorId: allocs[0].toSectorId },
   });
   res.json(await enrichAllocation(updated));
 });

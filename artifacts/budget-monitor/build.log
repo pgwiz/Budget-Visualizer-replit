@@ -1,0 +1,33 @@
+
+> @workspace/budget-monitor@0.0.0 build
+> vite build --config vite.config.ts
+
+vite v7.3.2 building client environment for production...
+transforming...
+src/components/ui/tooltip.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+src/components/ui/label.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+✓ 108 modules transformed.
+✗ Build failed in 1.18s
+error during build:
+[vite:esbuild] Transform failed with 1 error:
+/home/nyakoe/Desktop/Budget-Visualizer-replit/artifacts/budget-monitor/src/components/layout/Sidebar.tsx:133:0: ERROR: Unexpected "export"
+file: /home/nyakoe/Desktop/Budget-Visualizer-replit/artifacts/budget-monitor/src/components/layout/Sidebar.tsx:133:0
+
+Unexpected "export"
+131 |  
+132 |  
+133 |  export function Sidebar() {
+    |  ^
+134 |    const { isOpen, close } = useSidebar();
+135 |  
+
+    at failureErrorWithLog (/home/nyakoe/Desktop/Budget-Visualizer-replit/node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild/lib/main.js:1467:15)
+    at /home/nyakoe/Desktop/Budget-Visualizer-replit/node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/home/nyakoe/Desktop/Budget-Visualizer-replit/node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/home/nyakoe/Desktop/Budget-Visualizer-replit/node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/home/nyakoe/Desktop/Budget-Visualizer-replit/node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:508:28)
+    at addChunk (node:internal/streams/readable:563:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:514:3)
+    at Readable.push (node:internal/streams/readable:394:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)

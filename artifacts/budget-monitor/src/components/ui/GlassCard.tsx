@@ -21,13 +21,13 @@ export function GlassCard({
   return (
     <div 
       className={cn(
-        "glass overflow-hidden flex flex-col",
+        "glass overflow-hidden flex flex-col bg-white border border-gray-200 shadow-sm rounded-xl",
         className
       )} 
       {...props}
     >
       {header && (
-        <div className={cn("px-6 py-4 border-b border-white/10 bg-white/5", headerClassName)}>
+        <div className={cn("px-6 py-4 border-b border-gray-200 bg-gray-50", headerClassName)}>
           {header}
         </div>
       )}
@@ -35,7 +35,7 @@ export function GlassCard({
         {children}
       </div>
       {footer && (
-        <div className={cn("px-6 py-4 border-t border-white/10 bg-white/5", footerClassName)}>
+        <div className={cn("px-6 py-4 border-t border-gray-200 bg-gray-50", footerClassName)}>
           {footer}
         </div>
       )}

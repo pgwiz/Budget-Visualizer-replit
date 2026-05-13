@@ -1,9 +1,9 @@
 import { cn } from '@/lib/utils';
-import { LucideIcon } from 'lucide-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { GlassCard } from './GlassCard';
 
 interface StatCardProps {
-  icon: LucideIcon;
+  icon: any;
   label: string;
   value: string | number;
   trend?: {
@@ -15,10 +15,10 @@ interface StatCardProps {
 }
 
 const colorMap = {
-  primary: 'text-blue-400 bg-blue-400/10',
-  success: 'text-emerald-400 bg-emerald-400/10',
-  warning: 'text-amber-400 bg-amber-400/10',
-  danger: 'text-rose-400 bg-rose-400/10',
+  primary: 'text-blue-600 bg-blue-50',
+  success: 'text-emerald-600 bg-emerald-50',
+  warning: 'text-amber-600 bg-amber-50',
+  danger: 'text-red-600 bg-red-50',
 };
 
 export function StatCard({ 
@@ -33,22 +33,22 @@ export function StatCard({
     <GlassCard className={cn("p-6", className)}>
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm font-medium text-white/40">{label}</p>
-          <h3 className="mt-2 text-2xl font-bold text-white">{value}</h3>
+          <p className="text-sm font-medium text-gray-500">{label}</p>
+          <h3 className="mt-2 text-2xl font-bold text-gray-900">{value}</h3>
           
           {trend && (
             <div className={cn(
               "mt-2 flex items-center text-xs font-medium",
-              trend.isUp ? "text-emerald-400" : "text-rose-400"
+              trend.isUp ? "text-emerald-600" : "text-red-600"
             )}>
               <span>{trend.isUp ? '↑' : '↓'} {Math.abs(trend.value)}%</span>
-              <span className="ml-1 text-white/40">vs last cycle</span>
+              <span className="ml-1 text-gray-400">vs last cycle</span>
             </div>
           )}
         </div>
         
         <div className={cn("p-3 rounded-xl", colorMap[color])}>
-          <Icon size={24} />
+          <FontAwesomeIcon icon={Icon} className="text-2xl" />
         </div>
       </div>
     </GlassCard>

@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { TrendingUp, Wallet, Percent } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ExternalLink, Settings2, TrendingUp, Wallet, Percent } from 'lucide-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faChevronRight, faChevronDown, faProjectDiagram, faUndo, faGripVertical, faExpand, faCompress, faTimes, faExternalLinkAlt, faChartLine, faWallet, faSearchPlus, faChevronUp, faChevronLeft, faLayerGroup, faList, faCog, faPercentage, faHome, faDownload, faCheck, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { Link } from 'wouter';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
@@ -50,7 +52,7 @@ function PopupContent({ node, onClose, onDesign }: { node: SectorTreeNode; onClo
     : [{ name: 'No data', value: 1, color: 'rgba(255,255,255,0.06)' }];
 
   // Bar: child sectors comparison
-  const children = node.children ?? [];
+  const children = Array.isArray(node.children) ? node.children : [];
   const barData = children.slice(0, 8).map((c: SectorTreeNode) => ({
     name: c.name.replace('Ministry of ', '').replace('Department of ', '').slice(0, 14),
     pct: Math.round(c.utilizationPct),
@@ -110,7 +112,7 @@ function PopupContent({ node, onClose, onDesign }: { node: SectorTreeNode; onClo
               <UtilizationRing value={node.utilizationPct} size={88} strokeWidth={6} />
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-xl font-bold text-white">{node.name}</h2>
+                  <h2 className="text-xl font-bold text-gray-900">{node.name}</h2>
                   <Badge variant="outline" className="font-bold text-xs uppercase tracking-widest">
                     {node.code}
                   </Badge>
@@ -120,13 +122,13 @@ function PopupContent({ node, onClose, onDesign }: { node: SectorTreeNode; onClo
                     {u.label} · {Math.round(node.utilizationPct)}% used
                   </span>
                   {children.length > 0 && (
-                    <span className="text-xs text-white/30">
+                    <span className="text-xs text-gray-400">
                       {children.length} sub-sector{children.length !== 1 ? 's' : ''}
                     </span>
                   )}
                   {node.responsibleUser && (
-                    <span className="text-xs text-white/30">
-                      Head: <span className="text-white/60">{node.responsibleUser.name}</span>
+                    <span className="text-xs text-gray-400">
+                      Head: <span className="text-gray-600">{node.responsibleUser.name}</span>
                     </span>
                   )}
                 </div>
@@ -134,14 +136,14 @@ function PopupContent({ node, onClose, onDesign }: { node: SectorTreeNode; onClo
             </div>
             <button
               onClick={onClose}
-              className="p-2 rounded-xl text-white/30 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+              className="p-2 rounded-xl text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors shrink-0"
             >
-              <X size={18} />
+              <FontAwesomeIcon icon={faTimes} className={`text-[${18}px] `} />
             </button>
           </div>
 
           {/* Stats row */}
-          <div className="grid grid-cols-3 gap-3 px-6 py-4 border-t border-b border-white/8">
+          <div className="grid grid-cols-3 gap-3 px-6 py-4 border-t border-b border-gray-200">
             {[
               { label: 'Net Received', val: node.netAllocated, icon: TrendingUp, color: 'text-blue-400', bg: 'bg-blue-500/10', isPercent: false },
               { label: 'Available', val: node.availableBalance, icon: Wallet, color: node.availableBalance < 0 ? 'text-rose-400' : 'text-emerald-400', bg: node.availableBalance < 0 ? 'bg-rose-500/10' : 'bg-emerald-500/10', isPercent: false },
@@ -151,7 +153,7 @@ function PopupContent({ node, onClose, onDesign }: { node: SectorTreeNode; onClo
                 <div className={cn('p-2 rounded-lg w-fit mb-2', bg)}>
                   <Icon size={14} className={color} />
                 </div>
-                <p className="text-[10px] uppercase tracking-widest text-white/30 font-bold">{label}</p>
+                <p className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">{label}</p>
                 <p className={cn('text-sm font-bold mt-1', color)}>
                   {isPercent ? `${Math.round(val)}%` : formatCurrency(val)}
                 </p>
@@ -163,7 +165,7 @@ function PopupContent({ node, onClose, onDesign }: { node: SectorTreeNode; onClo
           <div className="grid grid-cols-2 gap-4 p-6">
             {/* Donut */}
             <div>
-              <p className="text-[10px] uppercase tracking-widest text-white/30 font-bold mb-3">Budget Split</p>
+              <p className="text-[10px] uppercase tracking-widest text-gray-400 font-bold mb-3">Budget Split</p>
               <ResponsiveContainer width="100%" height={160}>
                 <PieChart>
                   <Pie data={pieData} innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value" startAngle={90} endAngle={-270}>
@@ -180,7 +182,7 @@ function PopupContent({ node, onClose, onDesign }: { node: SectorTreeNode; onClo
                 {pieData.filter(d => d.name !== 'No data').map((d) => (
                   <div key={d.name} className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color }} />
-                    <span className="text-[10px] text-white/40">{d.name}</span>
+                    <span className="text-[10px] text-gray-500">{d.name}</span>
                   </div>
                 ))}
               </div>
@@ -189,7 +191,7 @@ function PopupContent({ node, onClose, onDesign }: { node: SectorTreeNode; onClo
             {/* Child bars */}
             {barData.length > 0 ? (
               <div>
-                <p className="text-[10px] uppercase tracking-widest text-white/30 font-bold mb-3">Sub-sector Utilization</p>
+                <p className="text-[10px] uppercase tracking-widest text-gray-400 font-bold mb-3">Sub-sector Utilization</p>
                 <ResponsiveContainer width="100%" height={160}>
                   <BarChart data={barData} layout="vertical" margin={{ left: 0, right: 8 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false} />
@@ -209,7 +211,7 @@ function PopupContent({ node, onClose, onDesign }: { node: SectorTreeNode; onClo
                 </ResponsiveContainer>
               </div>
             ) : (
-              <div className="flex items-center justify-center text-white/20 text-xs">
+              <div className="flex items-center justify-center text-gray-400 text-xs">
                 No sub-sectors
               </div>
             )}
@@ -218,13 +220,13 @@ function PopupContent({ node, onClose, onDesign }: { node: SectorTreeNode; onClo
           {/* Children mini-list */}
           {children.length > 0 && (
             <div className="px-6 pb-4">
-              <p className="text-[10px] uppercase tracking-widest text-white/30 font-bold mb-3">Sub-sectors</p>
+              <p className="text-[10px] uppercase tracking-widest text-gray-400 font-bold mb-3">Sub-sectors</p>
               <div className="space-y-2">
                 {children.slice(0, 6).map((c: SectorTreeNode) => (
                   <div key={c.id} className="glass rounded-xl p-3 flex items-center gap-3">
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-white truncate">{c.name}</p>
-                      <div className="mt-1.5 h-1 w-full bg-white/8 rounded-full overflow-hidden">
+                      <p className="text-xs font-semibold text-gray-900 truncate">{c.name}</p>
+                      <div className="mt-1.5 h-1 w-full bg-gray-50 rounded-full overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all"
                           style={{
@@ -247,25 +249,25 @@ function PopupContent({ node, onClose, onDesign }: { node: SectorTreeNode; onClo
           )}
 
           {/* Footer actions */}
-          <div className="flex items-center gap-3 px-6 pb-6 pt-2 border-t border-white/8 mt-2 shrink-0">
+          <div className="flex items-center gap-3 px-6 pb-6 pt-2 border-t border-gray-200 mt-2 shrink-0">
             <Link href={`/sectors/${node.id}`}>
               <a className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-400 text-sm font-semibold transition-all">
-                <ExternalLink size={14} />
+                <FontAwesomeIcon icon={faExternalLinkAlt} className={`text-[${14}px] `} />
                 Full Detail
               </a>
             </Link>
             {onDesign && (
               <button
                 onClick={() => onDesign(node)}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/50 hover:text-white text-sm font-semibold transition-all"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-600 hover:text-gray-900 text-sm font-semibold transition-all"
               >
-                <Settings2 size={14} />
+                <FontAwesomeIcon icon={faCog} className={`text-[${14}px] `} />
                 Edit in Designer
               </button>
             )}
             <button
               onClick={onClose}
-              className="ml-auto px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/8 border border-white/10 text-white/40 text-sm transition-all"
+              className="ml-auto px-4 py-2.5 rounded-xl bg-gray-50 hover:bg-gray-50 border border-gray-200 text-gray-500 text-sm transition-all"
             >
               Close
             </button>

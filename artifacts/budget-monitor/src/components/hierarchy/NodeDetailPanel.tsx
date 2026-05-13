@@ -1,5 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ExternalLink, TrendingUp, Wallet, ChevronRight } from 'lucide-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { TrendingUp, Wallet } from 'lucide-react';
+import { faChevronRight, faChevronDown, faProjectDiagram, faUndo, faGripVertical, faExpand, faCompress, faTimes, faExternalLinkAlt, faChartLine, faWallet, faSearchPlus, faChevronUp, faChevronLeft, faLayerGroup, faList, faCog, faPercentage, faHome, faDownload, faCheck, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { Link } from 'wouter';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
@@ -62,12 +64,12 @@ export function NodeDetailPanel({ node, onClose }: NodeDetailPanelProps) {
             }}
           >
             {/* Header */}
-            <div className="flex items-start justify-between p-6 border-b border-white/10 shrink-0">
+            <div className="flex items-start justify-between p-6 border-b border-gray-200 shrink-0">
               <div className="flex items-start gap-4">
                 <UtilizationRing value={node.utilizationPct} size={72} strokeWidth={5} />
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-lg font-bold text-white leading-tight">{node.name}</h3>
+                    <h3 className="text-lg font-bold text-gray-900 leading-tight">{node.name}</h3>
                     <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider shrink-0">
                       {node.code}
                     </Badge>
@@ -76,15 +78,15 @@ export function NodeDetailPanel({ node, onClose }: NodeDetailPanelProps) {
                     {Math.round(node.utilizationPct)}% utilization
                   </p>
                   {node.children && node.children.length > 0 && (
-                    <p className="text-xs text-white/40 mt-0.5">{node.children.length} sub-sector{node.children.length > 1 ? 's' : ''}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{node.children.length} sub-sector{node.children.length > 1 ? 's' : ''}</p>
                   )}
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+                className="p-2 rounded-xl text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors shrink-0"
               >
-                <X size={18} />
+                <FontAwesomeIcon icon={faTimes} className={`text-[${18}px] `} />
               </button>
             </div>
 
@@ -101,7 +103,7 @@ export function NodeDetailPanel({ node, onClose }: NodeDetailPanelProps) {
                     <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center mb-2', bg)}>
                       <Icon size={16} className={color} />
                     </div>
-                    <p className="text-[10px] uppercase tracking-wider text-white/40 font-bold">{label}</p>
+                    <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">{label}</p>
                     <p className={cn('text-sm font-bold mt-0.5', color)}>{formatCurrency(value)}</p>
                   </div>
                 ))}
@@ -146,13 +148,13 @@ export function NodeDetailPanel({ node, onClose }: NodeDetailPanelProps) {
                             <div className="flex items-center justify-between mb-1">
                               <div className="flex items-center gap-2">
                                 <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.color }} />
-                                <span className="text-xs text-white/60">{d.name}</span>
+                                <span className="text-xs text-gray-600">{d.name}</span>
                               </div>
-                              <span className="text-xs font-bold text-white">
+                              <span className="text-xs font-bold text-gray-900">
                                 {total > 0 ? Math.round((d.value / total) * 100) : 0}%
                               </span>
                             </div>
-                            <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+                            <div className="h-1 w-full bg-gray-100 rounded-full overflow-hidden">
                               <div
                                 className="h-full rounded-full"
                                 style={{
@@ -161,7 +163,7 @@ export function NodeDetailPanel({ node, onClose }: NodeDetailPanelProps) {
                                 }}
                               />
                             </div>
-                            <p className="text-[10px] text-white/30 mt-0.5">{formatCurrency(d.value)}</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">{formatCurrency(d.value)}</p>
                           </div>
                         ))}
                       </div>
@@ -175,7 +177,7 @@ export function NodeDetailPanel({ node, onClose }: NodeDetailPanelProps) {
                 <Section title="Sub-Sector Comparison">
                   <ResponsiveContainer width="100%" height={160}>
                     <BarChart
-                      data={node.children.slice(0, 6).map((c: SectorTreeNode) => ({
+                      data={(Array.isArray(node.children) ? node.children : []).slice(0, 6).map((c: SectorTreeNode) => ({
                         name: c.code,
                         fullName: c.name,
                         allocated: c.netAllocated,
@@ -223,10 +225,10 @@ export function NodeDetailPanel({ node, onClose }: NodeDetailPanelProps) {
             </div>
 
             {/* Footer CTA */}
-            <div className="p-4 border-t border-white/10 shrink-0">
+            <div className="p-4 border-t border-gray-200 shrink-0">
               <Link href={`/sectors/${node.id}`}>
                 <a className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-400 font-semibold text-sm transition-all duration-200 hover:border-blue-400/50">
-                  <ExternalLink size={15} />
+                  <FontAwesomeIcon icon={faExternalLinkAlt} className={`text-[${15}px] `} />
                   View Full Details
                 </a>
               </Link>
@@ -241,7 +243,7 @@ export function NodeDetailPanel({ node, onClose }: NodeDetailPanelProps) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <h4 className="text-[10px] uppercase tracking-widest text-white/30 font-bold mb-3">{title}</h4>
+      <h4 className="text-[10px] uppercase tracking-widest text-gray-400 font-bold mb-3">{title}</h4>
       {children}
     </div>
   );
@@ -249,7 +251,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function EmptyChart({ text }: { text: string }) {
   return (
-    <div className="h-20 flex items-center justify-center text-white/30 text-sm italic">{text}</div>
+    <div className="h-20 flex items-center justify-center text-gray-400 text-sm italic">{text}</div>
   );
 }
 
@@ -259,20 +261,20 @@ function ChildPill({ child }: { child: SectorTreeNode }) {
 
   return (
     <Link href={`/sectors/${child.id}`}>
-      <a className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10 transition-all group">
+      <a className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 border border-transparent hover:border-gray-200 transition-all group">
         <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${color}15` }}>
           <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-white/80 truncate">{child.name}</span>
+            <span className="text-xs font-semibold text-gray-700 truncate">{child.name}</span>
             <span className="text-[10px] font-bold ml-2 shrink-0" style={{ color }}>{Math.round(pct)}%</span>
           </div>
-          <div className="h-1 w-full bg-white/10 rounded-full mt-1.5 overflow-hidden">
+          <div className="h-1 w-full bg-gray-100 rounded-full mt-1.5 overflow-hidden">
             <div className="h-full rounded-full" style={{ width: `${Math.min(100, pct)}%`, backgroundColor: color }} />
           </div>
         </div>
-        <ChevronRight size={14} className="text-white/20 group-hover:text-white/50 transition-colors shrink-0" />
+        <FontAwesomeIcon icon={faChevronRight} className={`text-[${14}px] text-gray-400 group-hover:text-gray-600 transition-colors shrink-0`} />
       </a>
     </Link>
   );

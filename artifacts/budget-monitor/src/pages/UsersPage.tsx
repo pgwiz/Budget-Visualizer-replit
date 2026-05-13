@@ -12,9 +12,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { queryClient } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import {
-  UserPlus, Trash2, Search, Shield, Edit2, X, Check,
-  ChevronDown, Users, Eye, Building2, Crown, Settings2,
-} from 'lucide-react';
+  faUserPlus, faTrashAlt, faSearch, faShieldAlt, faEdit, faTimes, faCheck,
+  faChevronDown, faUsers, faEye, faBuilding, faCrown, faCog, faUser,
+} from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 /* ── Role config ────────────────────────────────────────────── */
 const ROLES = [
@@ -22,7 +23,7 @@ const ROLES = [
     value: 'super_admin',
     label: 'System Administrator',
     desc: 'Full system access — users, cycles, structure, config',
-    icon: Settings2,
+    icon: faCog,
     color: '#f87171',
     bg: 'rgba(239,68,68,0.10)',
     border: 'rgba(239,68,68,0.22)',
@@ -32,7 +33,7 @@ const ROLES = [
     value: 'ceo',
     label: 'Chief Executive Officer',
     desc: 'Business leadership — allocations, procurement approval, reports',
-    icon: Crown,
+    icon: faCrown,
     color: '#fbbf24',
     bg: 'rgba(245,158,11,0.10)',
     border: 'rgba(245,158,11,0.22)',
@@ -42,7 +43,7 @@ const ROLES = [
     value: 'ministry_head',
     label: 'Ministry Head',
     desc: 'Manages ministry budget and distributes to departments',
-    icon: Building2,
+    icon: faBuilding,
     color: '#60a5fa',
     bg: 'rgba(59,130,246,0.10)',
     border: 'rgba(59,130,246,0.22)',
@@ -52,7 +53,7 @@ const ROLES = [
     value: 'department_head',
     label: 'Department Head',
     desc: 'Manages department budget and raises purchase orders',
-    icon: Users,
+    icon: faUsers,
     color: '#34d399',
     bg: 'rgba(16,185,129,0.10)',
     border: 'rgba(16,185,129,0.22)',
@@ -62,7 +63,7 @@ const ROLES = [
     value: 'viewer',
     label: 'Read-only Viewer',
     desc: 'Can view data but cannot make any changes',
-    icon: Eye,
+    icon: faEye,
     color: '#94a3b8',
     bg: 'rgba(148,163,184,0.08)',
     border: 'rgba(148,163,184,0.15)',
@@ -82,7 +83,7 @@ function RoleBadge({ role }: { role: string }) {
   return (
     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold"
       style={{ color: m.color, background: m.bg, border: `1px solid ${m.border}` }}>
-      <Icon size={11} />
+      <FontAwesomeIcon icon={Icon} className="text-[11px]" />
       {m.label}
     </span>
   );
@@ -126,39 +127,39 @@ function UserForm({ mode, initial, isSuperAdmin, sectors, onSave, onCancel, savi
       exit={{ opacity: 0, y: -8 }}
       className="rounded-2xl border border-blue-500/25 bg-blue-500/5 p-6 space-y-5"
     >
-      <p className="text-sm font-bold text-white">{mode === 'create' ? 'Add New User' : 'Edit User'}</p>
+      <p className="text-sm font-bold text-gray-900">{mode === 'create' ? 'Add New User' : 'Edit User'}</p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <Label className="text-white/50 text-xs uppercase tracking-wider">Full Name</Label>
-          <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Grace Wanjiku" className="glass border-white/10 text-white placeholder:text-white/20" />
+          <Label className="text-gray-600 text-xs uppercase tracking-wider">Full Name</Label>
+          <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Grace Wanjiku" className="glass border-gray-200 text-gray-900 placeholder:text-gray-400" />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-white/50 text-xs uppercase tracking-wider">Email</Label>
-          <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="name@ministry.go.ke" className="glass border-white/10 text-white placeholder:text-white/20" />
+          <Label className="text-gray-600 text-xs uppercase tracking-wider">Email</Label>
+          <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="name@ministry.go.ke" className="glass border-gray-200 text-gray-900 placeholder:text-gray-400" />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-white/50 text-xs uppercase tracking-wider">
+          <Label className="text-gray-600 text-xs uppercase tracking-wider">
             {mode === 'edit' ? 'New Password (leave blank to keep)' : 'Password'}
           </Label>
-          <Input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" className="glass border-white/10 text-white placeholder:text-white/20" />
+          <Input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" className="glass border-gray-200 text-gray-900 placeholder:text-gray-400" />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-white/50 text-xs uppercase tracking-wider">Sector (optional)</Label>
+          <Label className="text-gray-600 text-xs uppercase tracking-wider">Sector (optional)</Label>
           <select
             value={sectorId}
             onChange={e => setSector(e.target.value)}
-            className="w-full h-10 px-3 rounded-xl border border-white/10 bg-white/5 text-white text-sm focus:outline-none focus:border-blue-500/50"
+            className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 text-sm focus:outline-none focus:border-blue-500/50"
           >
-            <option value="" className="bg-[#0d1527]">— All Sectors —</option>
-            {sectors.map(s => <option key={s.id} value={s.id} className="bg-[#0d1527]">{s.name}</option>)}
+            <option value="" className="bg-white">— All Sectors —</option>
+            {sectors.map(s => <option key={s.id} value={s.id} className="bg-white">{s.name}</option>)}
           </select>
         </div>
       </div>
 
       {/* Role picker */}
       <div className="space-y-2">
-        <Label className="text-white/50 text-xs uppercase tracking-wider">Role</Label>
+        <Label className="text-gray-600 text-xs uppercase tracking-wider">Role</Label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {availableRoles.map(r => {
             const Icon = r.icon;
@@ -169,26 +170,26 @@ function UserForm({ mode, initial, isSuperAdmin, sectors, onSave, onCancel, savi
                 type="button"
                 onClick={() => setRole(r.value)}
                 className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all ${
-                  selected ? 'border-opacity-60' : 'border-white/8 hover:border-white/15 bg-white/3'
+                  selected ? 'border-opacity-60' : 'border-gray-200 hover:border-white/15 bg-gray-50'
                 }`}
                 style={selected ? { background: r.bg, borderColor: r.border } : {}}
               >
                 <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
                   style={{ background: selected ? r.bg : 'rgba(255,255,255,0.05)', border: `1px solid ${selected ? r.border : 'rgba(255,255,255,0.08)'}` }}>
-                  <Icon size={13} style={{ color: selected ? r.color : 'rgba(255,255,255,0.3)' }} />
+                  <FontAwesomeIcon icon={Icon} className="text-[13px]" style={{ color: selected ? r.color : 'rgba(255,255,255,0.3)' }} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-xs font-bold ${selected ? 'text-white' : 'text-white/50'}`}>{r.label}</p>
-                  <p className="text-[10px] text-white/25 leading-snug mt-0.5">{r.desc}</p>
+                  <p className={`text-xs font-bold ${selected ? 'text-gray-900' : 'text-gray-600'}`}>{r.label}</p>
+                  <p className="text-[10px] text-gray-400 leading-snug mt-0.5">{r.desc}</p>
                 </div>
-                {selected && <Check size={13} style={{ color: r.color }} className="shrink-0 mt-1" />}
+                {selected && <FontAwesomeIcon icon={faCheck} className="text-[13px] shrink-0 mt-1" style={{ color: r.color }} />}
               </button>
             );
           })}
         </div>
         {role === 'super_admin' && (
           <p className="text-[11px] text-rose-400/70 flex items-center gap-1.5 px-1">
-            <Shield size={11} /> System Administrator has unrestricted access to all features.
+            <FontAwesomeIcon icon={faShieldAlt} className="text-[11px]" /> System Administrator has unrestricted access to all features.
           </p>
         )}
       </div>
@@ -197,13 +198,13 @@ function UserForm({ mode, initial, isSuperAdmin, sectors, onSave, onCancel, savi
         <button
           onClick={handleSave}
           disabled={!valid || saving}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-40 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-gray-900 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 transition-colors"
         >
-          {saving ? <LoadingSpinner size={14} className="p-0 text-white" /> : <Check size={14} />}
+          {saving ? <LoadingSpinner size={14} className="p-0 text-gray-900" /> : <FontAwesomeIcon icon={faCheck} className="text-[14px]" />}
           {mode === 'create' ? 'Create User' : 'Save Changes'}
         </button>
-        <button onClick={onCancel} className="px-4 py-2 rounded-xl text-sm text-white/40 hover:text-white transition-colors flex items-center gap-1.5">
-          <X size={14} /> Cancel
+        <button onClick={onCancel} className="px-4 py-2 rounded-xl text-sm text-gray-500 hover:text-gray-900 transition-colors flex items-center gap-1.5">
+          <FontAwesomeIcon icon={faTimes} className="text-[14px]" /> Cancel
         </button>
       </div>
     </motion.div>
@@ -225,22 +226,21 @@ function UserRow({ u, isSuperAdmin, sectors, onEdit, onDelete }: {
       exit={{ opacity: 0, x: 8 }}
       className="flex items-center gap-4 px-4 py-3.5 rounded-xl bg-white/4 hover:bg-white/6 transition-colors group"
     >
-      {/* Avatar */}
-      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold"
-        style={{ background: meta.bg, border: `1px solid ${meta.border}`, color: meta.color }}>
-        {initials}
+      {/* Avatar — bare FA icon, sidebar dark color, no bg */}
+      <div className="w-9 h-9 flex items-center justify-center shrink-0">
+        <FontAwesomeIcon icon={faUser} className="text-[22px]" style={{ color: '#4B117A' }} />
       </div>
       {/* Name + email */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-white truncate">{u.name}</p>
-        <p className="text-xs text-white/35 truncate">{u.email}</p>
+        <p className="text-sm font-semibold text-gray-900 truncate">{u.name}</p>
+        <p className="text-xs text-gray-900/35 truncate">{u.email}</p>
       </div>
       {/* Role badge */}
       <div className="hidden sm:block shrink-0">
         <RoleBadge role={u.role} />
       </div>
       {/* Sector */}
-      <p className="hidden md:block text-xs text-white/35 shrink-0 max-w-[120px] truncate">
+      <p className="hidden md:block text-xs text-gray-900/35 shrink-0 max-w-[120px] truncate">
         {u.sector?.name ?? 'All sectors'}
       </p>
       {/* Status */}
@@ -251,11 +251,11 @@ function UserRow({ u, isSuperAdmin, sectors, onEdit, onDelete }: {
       {/* Actions */}
       {isSuperAdmin && (
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-          <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-white/10 text-white/30 hover:text-white transition-all">
-            <Edit2 size={13} />
+          <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-900 transition-all">
+            <FontAwesomeIcon icon={faEdit} className="text-[13px]" />
           </button>
-          <button onClick={onDelete} className="p-1.5 rounded-lg hover:bg-rose-500/10 text-white/30 hover:text-rose-400 transition-all">
-            <Trash2 size={13} />
+          <button onClick={onDelete} className="p-1.5 rounded-lg hover:bg-rose-500/10 text-gray-400 hover:text-rose-400 transition-all">
+            <FontAwesomeIcon icon={faTrashAlt} className="text-[13px]" />
           </button>
         </div>
       )}
@@ -272,7 +272,8 @@ export default function UsersPage() {
   const [roleFilter, setRole] = useState<string>('all');
 
   const { data: users = [], isLoading } = useListUsers();
-  const { data: sectors = [] }          = useListSectors();
+  const { data: rawSectors }          = useListSectors();
+  const sectors = Array.isArray(rawSectors) ? rawSectors : [];
 
   const createMutation = useCreateUser({ mutation: { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() }); setAdding(false); } } });
   const updateMutation = useUpdateUser({ mutation: { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() }); setEditId(null); } } });
@@ -294,10 +295,10 @@ export default function UsersPage() {
   ROLES.forEach(r => { counts[r.value] = users.filter(u => u.role === r.value).length; });
 
   const sections = [
-    { label: 'System Administrators', icon: Settings2, color: '#f87171', users: adminUsers },
-    { label: 'Chief Executive Officers', icon: Crown, color: '#fbbf24', users: bizUsers },
-    { label: 'Ministry & Department Heads', icon: Building2, color: '#60a5fa', users: mgmtUsers },
-    { label: 'Viewers', icon: Eye, color: '#94a3b8', users: viewerUsers },
+    { label: 'System Administrators', icon: faCog, color: '#f87171', users: adminUsers },
+    { label: 'Chief Executive Officers', icon: faCrown, color: '#fbbf24', users: bizUsers },
+    { label: 'Ministry & Department Heads', icon: faBuilding, color: '#60a5fa', users: mgmtUsers },
+    { label: 'Viewers', icon: faEye, color: '#94a3b8', users: viewerUsers },
   ];
 
   const editUser = users.find(u => u.id === editId);
@@ -307,37 +308,47 @@ export default function UsersPage() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-            <Users size={22} className="text-blue-400" />
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+            <FontAwesomeIcon icon={faUsers} className="text-[22px] text-blue-400" />
             Users & Access Control
           </h1>
-          <p className="text-white/30 text-sm mt-1">
+          <p className="text-gray-400 text-sm mt-1">
             {users.length} users · {isSuperAdmin ? 'Full management access' : 'Read-only view'}
           </p>
         </div>
         {isSuperAdmin && !adding && (
           <button
             onClick={() => setAdding(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-500 transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-900 bg-blue-600 hover:bg-blue-500 transition-colors"
           >
-            <UserPlus size={15} /> Add User
+            <FontAwesomeIcon icon={faUserPlus} className="text-[15px]" /> Add User
           </button>
         )}
       </div>
 
       {/* Search + filter */}
       <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-44">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email..." className="pl-9 glass border-white/10 text-white text-sm placeholder:text-white/20" />
+        <div className="relative flex-1 min-w-44 flex items-center">
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search by name or email..."
+            className="w-full h-11 pl-5 pr-14 rounded-full border border-gray-200 bg-gray-50 text-gray-900 text-sm placeholder:text-gray-400 focus:outline-none focus:border-[#4B117A]/40 focus:ring-2 focus:ring-[#4B117A]/10 transition-all"
+          />
+          <button className="absolute right-1.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all hover:opacity-90 active:scale-95"
+            style={{ background: '#4B117A' }}
+            onClick={() => {}}
+          >
+            <FontAwesomeIcon icon={faSearch} className="text-white text-[13px]" />
+          </button>
         </div>
-        <div className="flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/10">
-          <button onClick={() => setRole('all')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${roleFilter === 'all' ? 'bg-blue-500/20 text-blue-400' : 'text-white/40 hover:text-white'}`}>
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-gray-50 border border-gray-200">
+          <button onClick={() => setRole('all')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${roleFilter === 'all' ? 'bg-blue-500/20 text-blue-400' : 'text-gray-500 hover:text-gray-900'}`}>
             All ({counts.all})
           </button>
           {ROLES.map(r => counts[r.value] > 0 && (
             <button key={r.value} onClick={() => setRole(r.value)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${roleFilter === r.value ? 'text-white' : 'text-white/40 hover:text-white'}`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${roleFilter === r.value ? 'text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
               style={roleFilter === r.value ? { background: r.bg, color: r.color } : {}}
             >
               {r.label.split(' ')[0]} ({counts[r.value]})
@@ -379,7 +390,7 @@ export default function UsersPage() {
         <div className="flex justify-center py-20"><LoadingSpinner size={36} /></div>
       ) : roleFilter !== 'all' ? (
         /* Flat filtered list */
-        <GlassCard header={<span className="text-sm font-bold text-white">Filtered Results</span>}>
+        <GlassCard header={<span className="text-sm font-bold text-gray-900">Filtered Results</span>}>
           <div className="space-y-2">
             <AnimatePresence>
               {filtered(users).map(u => (
@@ -390,7 +401,7 @@ export default function UsersPage() {
               ))}
             </AnimatePresence>
             {filtered(users).length === 0 && (
-              <p className="text-center text-white/20 text-sm py-8">No users match your filter</p>
+              <p className="text-center text-gray-400 text-sm py-8">No users match your filter</p>
             )}
           </div>
         </GlassCard>
@@ -405,10 +416,8 @@ export default function UsersPage() {
                 key={label}
                 header={
                   <div className="flex items-center gap-3">
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: `${color}15`, border: `1px solid ${color}25` }}>
-                      <Icon size={13} style={{ color }} />
-                    </div>
-                    <span className="text-sm font-bold text-white">{label}</span>
+                    <FontAwesomeIcon icon={Icon} className="text-[16px]" style={{ color: '#4B117A' }} />
+                    <span className="text-sm font-bold text-gray-900">{label}</span>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg" style={{ color, background: `${color}15`, border: `1px solid ${color}20` }}>
                       {visibleUsers.length}
                     </span>
@@ -416,7 +425,7 @@ export default function UsersPage() {
                 }
               >
                 {visibleUsers.length === 0 ? (
-                  <p className="text-center text-white/20 text-sm py-6">No users in this group</p>
+                  <p className="text-center text-gray-400 text-sm py-6">No users in this group</p>
                 ) : (
                   <div className="space-y-2">
                     <AnimatePresence>
