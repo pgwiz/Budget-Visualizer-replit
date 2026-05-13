@@ -65,28 +65,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex flex-col h-full bg-[#212529] border-r border-[#343a40]">
-      {/* ── Header ── */}
-      <div className="flex items-center border-b border-[#343a40] h-[60px]">
-        <div className="w-14 flex items-center justify-center border-r border-[#343a40] h-full">
-          <FontAwesomeIcon icon={faCircleNodes} className="text-white text-xl" />
-        </div>
-        <div className="flex-1 flex items-center justify-between px-3 h-full">
-          <div className="flex items-center gap-3 text-left truncate">
-            <div className="flex items-center justify-center shrink-0">
-              <FontAwesomeIcon icon={faUser} className="text-gray-400 w-5" />
-            </div>
-            <div className="truncate min-w-0">
-               <div className="text-sm text-gray-200 font-bold truncate">{user?.name || 'Current User'}</div>
-               <div className="text-[10px] text-gray-400 uppercase tracking-wider truncate">
-                 {(user?.role || 'User').replace('_', ' ')}
-               </div>
-            </div>
-          </div>
-        </div>
-      </div>
+
 
       {/* ── Navigation ── */}
-      <nav className="flex-1 overflow-y-auto py-4 space-y-0.5 scrollbar-thin">
+      <nav className="flex-1 overflow-y-auto py-4 space-y-0.5 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         <NavItem href="/"            label="Home"        icon={faHome}            active={location === '/'} onNavigate={onNavigate} />
         <NavItem href="/dashboard"   label="Dashboard"   icon={faChartPie} active={at('/dashboard')} onNavigate={onNavigate} />
         <NavItem href="/reports"     label="Reports"     icon={faFileAlt}        active={at('/reports')} onNavigate={onNavigate} />
@@ -148,7 +130,7 @@ export function Sidebar() {
     <>
       {/* ── Desktop sidebar (always visible ≥ md) ── */}
       <aside
-        className="hidden md:flex w-60 flex-col h-screen fixed left-0 top-0 z-20 border-r border-white/8"
+        className="hidden md:flex w-60 flex-col h-[calc(100vh-60px)] fixed left-0 top-[60px] z-20 border-r border-white/8"
         style={sidebarStyle}
       >
         <SidebarContent />

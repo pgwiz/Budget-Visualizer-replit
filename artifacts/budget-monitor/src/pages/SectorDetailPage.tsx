@@ -26,6 +26,7 @@ import {
 } from 'recharts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SectorTree } from '@/components/sectors/SectorTree';
+import { OrgChart } from '@/components/orgchart/OrgChart';
 
 const TOOLTIP_STYLE = {
   contentStyle: {
@@ -311,12 +312,28 @@ export default function SectorDetailPage({ id }: { id: string }) {
               <TabsTrigger value="tree" className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400 gap-2 text-xs">
                 <FontAwesomeIcon icon={faNetworkWired} className="text-[13px]" /> Tree View
               </TabsTrigger>
+              <TabsTrigger value="orgchart" className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400 gap-2 text-xs">
+                <FontAwesomeIcon icon={faSitemap} className={`text-[${13}px] `} /> Org Chart
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="hierarchy">
               <BudgetHierarchyTree nodes={subtreeChildren} totalBudget={allocated + available} cycleName={sector.name} />
             </TabsContent>
             <TabsContent value="tree">
               <SectorTree nodes={subtreeChildren} />
+            </TabsContent>
+            <TabsContent value="orgchart">
+              {subtreeLoading ? (
+                <LoadingSpinner size={40} className="py-20" />
+              ) : (
+                <div className="p-2">
+                  <OrgChart
+                    nodes={subtreeRoot ? [subtreeRoot] : []}
+                    totalBudget={allocated + available}
+                    cycleName={sector.name}
+                  />
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </GlassCard>

@@ -55,11 +55,12 @@ export function AppLayout({ children }: AppLayoutProps) {
       <div className="flex min-h-screen bg-transparent relative">
         <BackgroundWatermark />
         
+        <TopBar />
+        
         <Sidebar />
 
         {/* Main area — pushed right on desktop, full-width on mobile */}
-        <div className="flex-1 flex flex-col min-h-screen md:ml-60">
-          <TopBar />
+        <div className="flex-1 flex flex-col min-h-screen md:ml-60 pt-[60px]">
           <main className="flex-1 p-4 sm:p-6 md:p-8 pb-24 md:pb-8 relative z-10">
             {children}
           </main>

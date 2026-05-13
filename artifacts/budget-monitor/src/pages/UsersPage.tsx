@@ -9,6 +9,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { queryClient } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import {
@@ -216,50 +217,49 @@ function UserRow({ u, isSuperAdmin, sectors, onEdit, onDelete }: {
   u: any; isSuperAdmin: boolean; sectors: any[];
   onEdit: () => void; onDelete: () => void;
 }) {
-  const meta = roleMeta(u.role);
-  const initials = u.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, x: -8 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 8 }}
-      className="flex items-center gap-4 px-4 py-3.5 rounded-xl bg-white/4 hover:bg-white/6 transition-colors group"
-    >
-      {/* Avatar — bare FA icon, sidebar dark color, no bg */}
-      <div className="w-9 h-9 flex items-center justify-center shrink-0">
-        <FontAwesomeIcon icon={faUser} className="text-[22px]" style={{ color: '#4B117A' }} />
-      </div>
-      {/* Name + email */}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-gray-900 truncate">{u.name}</p>
-        <p className="text-xs text-gray-900/35 truncate">{u.email}</p>
-      </div>
-      {/* Role badge */}
-      <div className="hidden sm:block shrink-0">
-        <RoleBadge role={u.role} />
-      </div>
-      {/* Sector */}
-      <p className="hidden md:block text-xs text-gray-900/35 shrink-0 max-w-[120px] truncate">
-        {u.sector?.name ?? 'All sectors'}
-      </p>
-      {/* Status */}
-      <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg shrink-0"
-        style={{ color: u.isActive ? '#34d399' : '#f87171', background: u.isActive ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)' }}>
-        {u.isActive ? 'ACTIVE' : 'INACTIVE'}
-      </span>
-      {/* Actions */}
-      {isSuperAdmin && (
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-          <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-900 transition-all">
-            <FontAwesomeIcon icon={faEdit} className="text-[13px]" />
-          </button>
-          <button onClick={onDelete} className="p-1.5 rounded-lg hover:bg-rose-500/10 text-gray-400 hover:text-rose-400 transition-all">
-            <FontAwesomeIcon icon={faTrashAlt} className="text-[13px]" />
-          </button>
+    <TableRow className="border-gray-200 transition-colors group">
+      {/* User Details */}
+      <TableCell className="bg-slate-100">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 flex items-center justify-center shrink-0">
+            <FontAwesomeIcon icon={faUser} className="text-[20px]" style={{ color: '#4B117A' }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-gray-900 truncate">{u.name}</p>
+            <p className="text-xs text-gray-600 truncate">{u.email}</p>
+          </div>
         </div>
-      )}
-    </motion.div>
+      </TableCell>
+      {/* Role badge */}
+      <TableCell className="bg-blue-100">
+        <RoleBadge role={u.role} />
+      </TableCell>
+      {/* Sector */}
+      <TableCell className="bg-emerald-100 text-emerald-900 font-bold text-sm">
+        {u.sector?.name ?? 'All sectors'}
+      </TableCell>
+      {/* Status */}
+      <TableCell className="bg-amber-100">
+        <span className="text-[10px] font-bold px-2 py-1 rounded-lg shrink-0 shadow-sm"
+          style={{ color: '#fff', background: u.isActive ? '#10b981' : '#ef4444' }}>
+          {u.isActive ? 'ACTIVE' : 'INACTIVE'}
+        </span>
+      </TableCell>
+      {/* Actions */}
+      <TableCell className="bg-gray-100 text-right">
+        {isSuperAdmin && (
+          <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+            <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-gray-200 text-gray-500 hover:text-gray-900 transition-all">
+              <FontAwesomeIcon icon={faEdit} className="text-[13px]" />
+            </button>
+            <button onClick={onDelete} className="p-1.5 rounded-lg hover:bg-red-200 text-gray-500 hover:text-red-600 transition-all">
+              <FontAwesomeIcon icon={faTrashAlt} className="text-[13px]" />
+            </button>
+          </div>
+        )}
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -295,10 +295,10 @@ export default function UsersPage() {
   ROLES.forEach(r => { counts[r.value] = users.filter(u => u.role === r.value).length; });
 
   const sections = [
-    { label: 'System Administrators', icon: faCog, color: '#f87171', users: adminUsers },
-    { label: 'Chief Executive Officers', icon: faCrown, color: '#fbbf24', users: bizUsers },
-    { label: 'Ministry & Department Heads', icon: faBuilding, color: '#60a5fa', users: mgmtUsers },
-    { label: 'Viewers', icon: faEye, color: '#94a3b8', users: viewerUsers },
+    { label: 'System Administrators', icon: faCog, headerBg: 'bg-rose-600', users: adminUsers },
+    { label: 'Chief Executive Officers', icon: faCrown, headerBg: 'bg-orange-600', users: bizUsers },
+    { label: 'Ministry & Department Heads', icon: faBuilding, headerBg: 'bg-blue-600', users: mgmtUsers },
+    { label: 'Viewers', icon: faEye, headerBg: 'bg-slate-600', users: viewerUsers },
   ];
 
   const editUser = users.find(u => u.id === editId);
@@ -390,55 +390,81 @@ export default function UsersPage() {
         <div className="flex justify-center py-20"><LoadingSpinner size={36} /></div>
       ) : roleFilter !== 'all' ? (
         /* Flat filtered list */
-        <GlassCard header={<span className="text-sm font-bold text-gray-900">Filtered Results</span>}>
-          <div className="space-y-2">
-            <AnimatePresence>
-              {filtered(users).map(u => (
-                <UserRow key={u.id} u={u} isSuperAdmin={isSuperAdmin} sectors={sectors}
-                  onEdit={() => setEditId(u.id)}
-                  onDelete={() => { if (confirm(`Delete "${u.name}"?`)) deleteMutation.mutate({ userId: u.id }); }}
-                />
-              ))}
-            </AnimatePresence>
+        <div className="rounded-xl border border-gray-200 overflow-hidden shadow-sm bg-white">
+          <div className="px-4 py-3 flex items-center justify-between text-white bg-[#4B117A]">
+            <span className="text-sm font-bold tracking-wide">Filtered Results</span>
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-white/20 border border-white/30 shadow-sm hover:bg-white/30 transition-colors">
+              {filtered(users).length} Users
+            </span>
+          </div>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="border-b border-gray-200">
+                <TableRow className="hover:bg-transparent border-none">
+                  <TableHead className="bg-slate-200/80 text-gray-700 font-bold text-xs uppercase tracking-wider">User Details</TableHead>
+                  <TableHead className="bg-blue-200/80 text-gray-700 font-bold text-xs uppercase tracking-wider">Role</TableHead>
+                  <TableHead className="bg-emerald-200/80 text-gray-700 font-bold text-xs uppercase tracking-wider">Sector</TableHead>
+                  <TableHead className="bg-amber-200/80 text-gray-700 font-bold text-xs uppercase tracking-wider">Status</TableHead>
+                  <TableHead className="bg-gray-200/80 text-gray-700 font-bold text-xs uppercase tracking-wider text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered(users).map(u => (
+                  <UserRow key={u.id} u={u} isSuperAdmin={isSuperAdmin} sectors={sectors}
+                    onEdit={() => setEditId(u.id)}
+                    onDelete={() => { if (confirm(`Delete "${u.name}"?`)) deleteMutation.mutate({ userId: u.id }); }}
+                  />
+                ))}
+              </TableBody>
+            </Table>
             {filtered(users).length === 0 && (
               <p className="text-center text-gray-400 text-sm py-8">No users match your filter</p>
             )}
           </div>
-        </GlassCard>
+        </div>
       ) : (
         /* Grouped by role section */
-        <div className="space-y-4">
-          {sections.map(({ label, icon: Icon, color, users: sectionUsers }) => {
+        <div className="space-y-6">
+          {sections.map(({ label, icon: Icon, headerBg, users: sectionUsers }) => {
             const visibleUsers = filtered(sectionUsers);
             if (visibleUsers.length === 0 && !search) return null;
             return (
-              <GlassCard
-                key={label}
-                header={
-                  <div className="flex items-center gap-3">
-                    <FontAwesomeIcon icon={Icon} className="text-[16px]" style={{ color: '#4B117A' }} />
-                    <span className="text-sm font-bold text-gray-900">{label}</span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg" style={{ color, background: `${color}15`, border: `1px solid ${color}20` }}>
-                      {visibleUsers.length}
-                    </span>
+              <div key={label} className="rounded-xl border border-gray-200 overflow-hidden shadow-sm bg-white">
+                <div className={`px-4 py-3 flex items-center justify-between text-white ${headerBg}`}>
+                  <div className="flex items-center gap-2">
+                    <FontAwesomeIcon icon={Icon} className="text-[16px]" />
+                    <span className="text-sm font-bold tracking-wide">{label}</span>
                   </div>
-                }
-              >
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-white/20 border border-white/30 shadow-sm hover:bg-white/30 transition-colors">
+                    {visibleUsers.length} Users
+                  </span>
+                </div>
                 {visibleUsers.length === 0 ? (
                   <p className="text-center text-gray-400 text-sm py-6">No users in this group</p>
                 ) : (
-                  <div className="space-y-2">
-                    <AnimatePresence>
-                      {visibleUsers.map(u => (
-                        <UserRow key={u.id} u={u} isSuperAdmin={isSuperAdmin} sectors={sectors}
-                          onEdit={() => setEditId(u.id)}
-                          onDelete={() => { if (confirm(`Delete "${u.name}"?`)) deleteMutation.mutate({ userId: u.id }); }}
-                        />
-                      ))}
-                    </AnimatePresence>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader className="border-b border-gray-200">
+                        <TableRow className="hover:bg-transparent border-none">
+                          <TableHead className="bg-slate-200/80 text-gray-700 font-bold text-xs uppercase tracking-wider">User Details</TableHead>
+                          <TableHead className="bg-blue-200/80 text-gray-700 font-bold text-xs uppercase tracking-wider">Role</TableHead>
+                          <TableHead className="bg-emerald-200/80 text-gray-700 font-bold text-xs uppercase tracking-wider">Sector</TableHead>
+                          <TableHead className="bg-amber-200/80 text-gray-700 font-bold text-xs uppercase tracking-wider">Status</TableHead>
+                          <TableHead className="bg-gray-200/80 text-gray-700 font-bold text-xs uppercase tracking-wider text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {visibleUsers.map(u => (
+                          <UserRow key={u.id} u={u} isSuperAdmin={isSuperAdmin} sectors={sectors}
+                            onEdit={() => setEditId(u.id)}
+                            onDelete={() => { if (confirm(`Delete "${u.name}"?`)) deleteMutation.mutate({ userId: u.id }); }}
+                          />
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
                 )}
-              </GlassCard>
+              </div>
             );
           })}
         </div>

@@ -223,65 +223,99 @@ export default function AllocationsPage() {
         {isLoading ? (
           <LoadingSpinner size={40} className="py-20" />
         ) : (
-          <div className="overflow-x-auto">
-          <Table>
-            <TableHeader className="bg-gray-50 border-b border-gray-200">
-              <TableRow className="hover:bg-transparent border-gray-200">
-                <TableHead className="text-gray-500 font-semibold">ID</TableHead>
-                <TableHead className="text-gray-500 font-semibold">From</TableHead>
-                <TableHead className="text-gray-500 font-semibold">To</TableHead>
-                <TableHead className="text-gray-500 font-semibold text-right">Amount</TableHead>
-                <TableHead className="text-gray-500 font-semibold">Status</TableHead>
-                <TableHead className="text-gray-500 font-semibold">Date</TableHead>
-                <TableHead className="text-gray-500 font-semibold text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredAllocations.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-gray-500 py-12">
-                    {searchQuery || statusFilter !== 'all' ? 'No matching allocations' : 'No allocations yet'}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredAllocations.map((item: AllocationWithDetails) => (
-                  <TableRow key={item.id} className="hover:bg-gray-50 border-gray-100 transition-colors">
-                    <TableCell className="text-gray-500 font-mono text-xs">#{item.id}</TableCell>
-                    <TableCell className="text-gray-900 font-medium">{item.fromSector?.name || 'System'}</TableCell>
-                    <TableCell className="text-gray-900 font-medium">{item.toSector?.name}</TableCell>
-                    <TableCell className="text-right text-gray-900 font-bold">{formatCurrency(item.amount)}</TableCell>
-                    <TableCell>
-                      <Badge className={
-                        item.status === 'active' ? "bg-emerald-50 text-emerald-600 border-emerald-200" :
-                        item.status === 'revoked' ? "bg-red-50 text-red-600 border-red-200" :
-                        "bg-amber-50 text-amber-600 border-amber-200"
-                      }>
-                        {item.status.toUpperCase()}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-gray-500 text-xs">
-                      {new Date(item.createdAt).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {item.status === 'active' && (
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          className="text-red-500 hover:bg-red-50 hover:text-red-600 rounded-lg"
-                          onClick={() => {
-                            setSelectedAllocation(item.id);
-                            setIsRevokeOpen(true);
-                          }}
-                        >
-                          <FontAwesomeIcon icon={faUndo} />
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+          <div className="p-4 space-y-6 bg-gray-50/50">
+            {filteredAllocations.length === 0 ? (
+              <div className="text-center text-gray-500 py-12">
+                {searchQuery || statusFilter !== 'all' ? 'No matching allocations' : 'No allocations yet'}
+              </div>
+            ) : (
+              Object.entries(
+                filteredAllocations.reduce((acc: Record<string, AllocationWithDetails[]>, item: AllocationWithDetails) => {
+                  const key = item.fromSector?.name || 'National Treasury (System)';
+                  if (!acc[key]) acc[key] = [];
+                  acc[key].push(item);
+                  return acc;
+                }, {})
+              ).map(([sectionName, items], index) => {
+                const COLORS = [
+                  'bg-blue-600',
+                  'bg-purple-600',
+                  'bg-emerald-600',
+                  'bg-orange-600',
+                  'bg-rose-600',
+                  'bg-indigo-600',
+                  'bg-cyan-600',
+                ];
+                const headerBg = COLORS[index % COLORS.length];
+
+                return (
+                  <div key={sectionName} className="rounded-xl border border-gray-200 overflow-hidden shadow-sm bg-white">
+                    <div className={`px-4 py-3 flex items-center justify-between text-white ${headerBg}`}>
+                      <span className="text-sm font-bold tracking-wide">{sectionName}</span>
+                      <Badge variant="outline" className="bg-white/20 text-white border-white/30 shadow-sm hover:bg-white/30 transition-colors">{items.length} Allocations</Badge>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader className="border-b border-gray-200">
+                          <TableRow className="hover:bg-transparent border-none">
+                            <TableHead className="bg-slate-200/80 text-gray-700 font-bold text-xs uppercase tracking-wider">ID</TableHead>
+                            <TableHead className="bg-blue-200/80 text-gray-700 font-bold text-xs uppercase tracking-wider">To</TableHead>
+                            <TableHead className="bg-emerald-200/80 text-gray-700 font-bold text-xs uppercase tracking-wider text-right">Amount</TableHead>
+                            <TableHead className="bg-amber-200/80 text-gray-700 font-bold text-xs uppercase tracking-wider">Status</TableHead>
+                            <TableHead className="bg-purple-200/80 text-gray-700 font-bold text-xs uppercase tracking-wider">Date</TableHead>
+                            <TableHead className="bg-gray-200/80 text-gray-700 font-bold text-xs uppercase tracking-wider text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {items.map((item: AllocationWithDetails) => {
+                            const amt = item.amount;
+                            const shortAmt = amt >= 1e9 ? `KES ${(amt / 1e9).toFixed(2)}B` :
+                                             amt >= 1e6 ? `KES ${(amt / 1e6).toFixed(2)}M` :
+                                             amt >= 1e3 ? `KES ${(amt / 1e3).toFixed(2)}K` :
+                                             `KES ${amt.toFixed(2)}`;
+
+                            return (
+                              <TableRow key={item.id} className="border-gray-200 transition-colors">
+                                <TableCell className="bg-slate-100 text-gray-700 font-mono text-xs font-semibold">#{item.id}</TableCell>
+                                <TableCell className="bg-blue-100 text-gray-900 font-bold">{item.toSector?.name}</TableCell>
+                                <TableCell className="bg-emerald-100 text-right text-emerald-900 font-black">{shortAmt}</TableCell>
+                                <TableCell className="bg-amber-100">
+                                  <Badge className={
+                                    item.status === 'active' ? "bg-emerald-500 text-white border-emerald-600 shadow-sm" :
+                                    item.status === 'revoked' ? "bg-red-500 text-white border-red-600 shadow-sm" :
+                                    "bg-amber-500 text-white border-amber-600 shadow-sm"
+                                  }>
+                                    {item.status.toUpperCase()}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="bg-purple-100 text-purple-900 font-semibold text-xs">
+                                  {new Date(item.createdAt).toLocaleDateString()}
+                                </TableCell>
+                                <TableCell className="bg-gray-100 text-right">
+                                  {item.status === 'active' && (
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon"
+                                      className="text-red-600 hover:bg-red-200 hover:text-red-700 rounded-lg h-8 w-8"
+                                      onClick={() => {
+                                        setSelectedAllocation(item.id);
+                                        setIsRevokeOpen(true);
+                                      }}
+                                    >
+                                      <FontAwesomeIcon icon={faUndo} className="text-[13px]" />
+                                    </Button>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         )}
       </GlassCard>
